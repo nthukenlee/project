@@ -1,0 +1,30 @@
+{
+  "ren_hall": {
+    "atlas": [0,0], "name": "仁齋", "floors_visible": 4,
+    "features": ["灰白小面磚", "紅褐水平帶", "T 字形窗與窗外冷氣", "圓弧樓梯塔", "綠色入口雨棚"],
+    "source": "https://sthousing.site.nthu.edu.tw/p/404-1254-13650.php?Lang=zh-tw",
+    "photos": ["https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/443/IMG_0709.jpg", "https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/443/IMG_0666.jpg"],
+    "note": "依官方可見立面重繪；遮蔽面與平面深度非測繪還原。"
+  },
+  "shi_hall": {
+    "atlas": [1,0], "name": "實齋", "floors_visible": null,
+    "features": ["灰白面磚", "坡地階梯入口", "卵石擋土牆", "深褐垂直入口格柵", "紅褐水平帶宿舍翼"],
+    "source": "https://sthousing.site.nthu.edu.tw/p/404-1254-13681.php?Lang=zh-tw",
+    "photos": ["https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/451/IMG_0697.jpg", "https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/451/IMG_0712.jpg"],
+    "note": "入口受坡地與樹木遮蔽，不推定完整樓層總數。"
+  },
+  "li_hall": {
+    "atlas": [0,1], "name": "禮齋", "floors_visible": 4,
+    "features": ["灰色細面磚", "成排 T 字窗", "垂直紅褐圓孔通風牆", "方形端部", "入口無障礙扶手"],
+    "source": "https://sthousing.site.nthu.edu.tw/p/404-1254-13683.php?Lang=zh-tw",
+    "photos": ["https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/458/IMG_0832.jpg"],
+    "note": "保留官方照片可見的入口及樓梯間特徵，不複製照片本身。"
+  },
+  "yi_hall": {
+    "atlas": [1,1], "name": "義齋", "floors_visible": 4,
+    "features": ["白色塗裝立面", "疊層半圓玻璃窗帶", "兩側直立矩形開口", "底層藍色玻璃", "一區服務中心入口"],
+    "source": "https://sthousing.site.nthu.edu.tw/p/404-1254-13635.php?Lang=zh-tw",
+    "photos": ["https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/442/IMG_3121.jpg", "https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/442/IMG_4133.jpg"],
+    "note": "依正面與側面照片區分白色主入口及宿舍翼，比例為遊戲尺度。"
+  }
+}

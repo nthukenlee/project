@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "name": "NTHU Hsinchu Main Campus - original enlarged game layout",
+    "tile_size": 32,
+    "columns": 160,
+    "rows": 112,
+    "navigation_warning": "This stylized inland campus layout is not suitable for real-world navigation.",
+    "geography": "inland; Success Lake is the only major water body"
+  },
+  "points": {"main_gate": [27, 106], "lake_entrance": [57, 82]},
+  "zones": [
+    {"id": "main_gate", "rect": [14, 97, 28, 15], "label": "zone.main_gate"},
+    {"id": "admin", "rect": [39, 84, 32, 17], "label": "zone.admin"},
+    {"id": "success_lake", "rect": [27, 68, 33, 28], "label": "zone.success_lake"},
+    {"id": "library", "rect": [59, 69, 31, 17], "label": "zone.library"},
+    {"id": "academic", "rect": [47, 39, 49, 30], "label": "zone.academic"},
+    {"id": "engineering", "rect": [94, 35, 35, 38], "label": "zone.engineering"},
+    {"id": "activity", "rect": [19, 50, 38, 20], "label": "zone.activity"},
+    {"id": "sports", "rect": [123, 52, 34, 38], "label": "zone.sports"},
+    {"id": "dorms", "rect": [5, 19, 47, 33], "label": "zone.dorms"},
+    {"id": "humanities", "rect": [50, 18, 43, 23], "label": "zone.humanities"},
+    {"id": "north_woods", "rect": [1, 1, 58, 17], "label": "zone.north_woods"},
+    {"id": "south_campus", "rect": [94, 1, 64, 34], "label": "zone.south_campus"}
+  ],
+  "roads": [
+    [25, 83, 5, 29], [12, 83, 139, 5], [72, 14, 5, 74],
+    [20, 15, 120, 4], [20, 37, 57, 5], [46, 47, 82, 5],
+    [43, 57, 85, 5], [20, 66, 82, 5], [55, 72, 73, 5],
+    [23, 95, 58, 5], [20, 38, 5, 48], [124, 15, 5, 75],
+    [106, 90, 43, 5], [118, 62, 37, 5], [102, 69, 27, 5],
+    [39, 33, 36, 4], [77, 24, 51, 4], [94, 34, 35, 4]
+  ],
+  "waters": [[31, 72, 25, 17], [35, 69, 17, 23]],
+  "sports_fields": [[130, 68, 20, 14], [132, 55, 17, 6]],
+  "buildings": [
+    {"id": "admin_hall", "rect": [42, 89, 13, 6], "label": "landmark.admin_hall", "color": "brick", "style": "admin"},
+    {"id": "main_library", "rect": [61, 74, 15, 8], "label": "landmark.main_library", "color": "purple", "style": "macronix"},
+    {"id": "general_1", "rect": [49, 52, 13, 5], "label": "landmark.general_1", "color": "brick", "style": "general"},
+    {"id": "general_2", "rect": [79, 52, 13, 5], "label": "landmark.general_2", "color": "purple", "style": "general_tower"},
+    {"id": "physics", "rect": [81, 41, 13, 6], "label": "landmark.physics", "color": "purple", "style": "science"},
+    {"id": "engineering_1", "rect": [101, 41, 16, 6], "label": "landmark.engineering_1", "color": "brick", "style": "engineering"},
+    {"id": "engineering_2", "rect": [103, 62, 16, 7], "label": "landmark.engineering_2", "color": "brick", "style": "engineering"},
+    {"id": "student_center", "rect": [28, 53, 13, 7], "label": "landmark.student_center", "color": "purple", "style": "activity"},
+    {"id": "dining_hall", "rect": [44, 61, 11, 5], "label": "landmark.dining_hall", "color": "brick", "style": "dining"},
+    {"id": "gym", "rect": [130, 52, 18, 9], "label": "landmark.gym", "color": "purple", "style": "gym"},
+    {"id": "humanities_building", "rect": [54, 22, 14, 10], "label": "landmark.humanities", "color": "brick", "style": "humanities"},
+    {"id": "education", "rect": [79, 28, 13, 7], "label": "landmark.education", "color": "purple", "style": "education"},
+    {"id": "ren_hall", "rect": [27, 22, 14, 7], "label": "landmark.ren_hall", "color": "brick", "style": "old_dorm"},
+    {"id": "shi_hall", "rect": [41, 29, 13, 7], "label": "landmark.shi_hall", "color": "purple", "style": "old_dorm"},
+    {"id": "li_hall", "rect": [7, 29, 12, 8], "label": "landmark.li_hall", "color": "brick", "style": "old_dorm"},
+    {"id": "yi_hall", "rect": [7, 20, 13, 7], "label": "landmark.yi_hall", "color": "purple", "style": "old_dorm"},
+    {"id": "auditorium", "rect": [27, 42, 13, 7], "label": "landmark.auditorium", "color": "brick", "style": "auditorium"},
+    {"id": "museum", "rect": [59, 38, 12, 8], "label": "landmark.museum", "color": "purple", "style": "museum"},
+    {"id": "chemistry", "rect": [96, 28, 13, 6], "label": "landmark.chemistry", "color": "brick", "style": "science"},
+    {"id": "electrical", "rect": [111, 28, 12, 6], "label": "landmark.electrical", "color": "purple", "style": "engineering"},
+    {"id": "computer_science", "rect": [131, 26, 15, 7], "label": "landmark.computer_science", "color": "brick", "style": "engineering"},
+    {"id": "delta_hall", "rect": [133, 35, 14, 7], "label": "landmark.delta_hall", "color": "purple", "style": "modern"},
+    {"id": "natural_science", "rect": [80, 7, 15, 7], "label": "landmark.natural_science", "color": "brick", "style": "science"},
+    {"id": "biomedical", "rect": [103, 7, 15, 7], "label": "landmark.biomedical", "color": "purple", "style": "modern"},
+    {"id": "south_lab", "rect": [133, 7, 15, 7], "label": "landmark.south_lab", "color": "brick", "style": "modern"},
+    {"id": "faculty_housing", "rect": [143, 20, 13, 8], "label": "landmark.faculty_housing", "color": "purple", "style": "housing"}
+  ]
+}

@@ -1,0 +1,26 @@
+# Python and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Build output, screenshots, temporary test saves and private local files
+outputs/
+work/
+build/
+dist/
+*.exe
+*.zip
+*.spec
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+
+# Release previews are generated artifacts, not game inputs
+*-preview*.png
+lakeside-gameplay-v*.png
+library-interior-v*.png
+lakeside-title-v*.png
