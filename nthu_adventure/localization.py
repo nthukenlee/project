@@ -15,10 +15,11 @@ class Localizer:
         for code in self.supported:
             with (data_dir / f"{code}.json").open("r", encoding="utf-8") as handle:
                 self.catalogs[code] = json.load(handle)
-            supplement = data_dir / f"{code}_v5.json"
-            if supplement.exists():
-                with supplement.open("r", encoding="utf-8") as handle:
-                    self.catalogs[code].update(json.load(handle))
+            for revision in ('v5','v6','v7'):
+                supplement = data_dir / f"{code}_{revision}.json"
+                if supplement.exists():
+                    with supplement.open("r", encoding="utf-8") as handle:
+                        self.catalogs[code].update(json.load(handle))
         self.language = language if language in self.supported else "zh_TW"
 
     def set_language(self, language: str) -> None:

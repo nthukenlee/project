@@ -1,63 +1,2423 @@
 {
   "meta": {
-    "name": "NTHU Hsinchu Main Campus - original enlarged game layout",
+    "name": "NTHU main campus — v7 entrance and Campus Green correction",
+    "revision": "official-roads-2026-v7",
     "tile_size": 32,
     "columns": 160,
-    "rows": 112,
-    "navigation_warning": "This stylized inland campus layout is not suitable for real-world navigation.",
-    "geography": "inland; Success Lake is the only major water body"
+    "rows": 224,
+    "reference": "https://commencement.site.nthu.edu.tw/var/file/583/1583/img/4983/802873434.pdf",
+    "lake_reference": "https://www.lib.nthu.edu.tw/events/2026/history/present.html",
+    "method": "Manually redrawn road topology and relative landmark positions from the official road plan; lake outline from the library renovation plan. Building fronts and walking distances use game scale.",
+    "navigation_warning": "Reference-based game map, not a survey or navigation map.",
+    "geography": "Inland Hsinchu campus. Guangfu Road gate at the upper right of this plan; Baoshan Road gate at the lower left.",
+    "architecture_reference": "https://campusmap.cc.nthu.edu.tw/xml/Markersite.xml"
   },
-  "points": {"main_gate": [27, 106], "lake_entrance": [57, 82]},
+  "points": {
+    "main_gate": [
+      142,
+      40
+    ],
+    "lake_entrance": [
+      95,
+      84
+    ],
+    "south_gate": [
+      32,
+      188
+    ]
+  },
   "zones": [
-    {"id": "main_gate", "rect": [14, 97, 28, 15], "label": "zone.main_gate"},
-    {"id": "admin", "rect": [39, 84, 32, 17], "label": "zone.admin"},
-    {"id": "success_lake", "rect": [27, 68, 33, 28], "label": "zone.success_lake"},
-    {"id": "library", "rect": [59, 69, 31, 17], "label": "zone.library"},
-    {"id": "academic", "rect": [47, 39, 49, 30], "label": "zone.academic"},
-    {"id": "engineering", "rect": [94, 35, 35, 38], "label": "zone.engineering"},
-    {"id": "activity", "rect": [19, 50, 38, 20], "label": "zone.activity"},
-    {"id": "sports", "rect": [123, 52, 34, 38], "label": "zone.sports"},
-    {"id": "dorms", "rect": [5, 19, 47, 33], "label": "zone.dorms"},
-    {"id": "humanities", "rect": [50, 18, 43, 23], "label": "zone.humanities"},
-    {"id": "north_woods", "rect": [1, 1, 58, 17], "label": "zone.north_woods"},
-    {"id": "south_campus", "rect": [94, 1, 64, 34], "label": "zone.south_campus"}
+    {
+      "id": "main_gate",
+      "rect": [
+        133,
+        30,
+        23,
+        25
+      ],
+      "label": "zone.main_gate"
+    },
+    {
+      "id": "admin",
+      "rect": [
+        99,
+        58,
+        28,
+        17
+      ],
+      "label": "zone.admin"
+    },
+    {
+      "id": "success_lake",
+      "rect": [
+        92,
+        74,
+        48,
+        40
+      ],
+      "label": "zone.success_lake"
+    },
+    {
+      "id": "library",
+      "rect": [
+        103,
+        44,
+        25,
+        17
+      ],
+      "label": "zone.library"
+    },
+    {
+      "id": "academic",
+      "rect": [
+        79,
+        45,
+        23,
+        29
+      ],
+      "label": "zone.academic"
+    },
+    {
+      "id": "engineering",
+      "rect": [
+        48,
+        22,
+        54,
+        22
+      ],
+      "label": "zone.engineering"
+    },
+    {
+      "id": "activity",
+      "rect": [
+        83,
+        97,
+        31,
+        24
+      ],
+      "label": "zone.activity"
+    },
+    {
+      "id": "sports",
+      "rect": [
+        38,
+        43,
+        41,
+        41
+      ],
+      "label": "zone.sports"
+    },
+    {
+      "id": "dorms",
+      "rect": [
+        78,
+        109,
+        65,
+        29
+      ],
+      "label": "zone.dorms"
+    },
+    {
+      "id": "humanities",
+      "rect": [
+        25,
+        126,
+        39,
+        22
+      ],
+      "label": "zone.humanities"
+    },
+    {
+      "id": "north_woods",
+      "rect": [
+        30,
+        14,
+        29,
+        15
+      ],
+      "label": "zone.north_woods"
+    },
+    {
+      "id": "south_campus",
+      "rect": [
+        26,
+        149,
+        58,
+        65
+      ],
+      "label": "zone.south_campus"
+    }
   ],
   "roads": [
-    [25, 83, 5, 29], [12, 83, 139, 5], [72, 14, 5, 74],
-    [20, 15, 120, 4], [20, 37, 57, 5], [46, 47, 82, 5],
-    [43, 57, 85, 5], [20, 66, 82, 5], [55, 72, 73, 5],
-    [23, 95, 58, 5], [20, 38, 5, 48], [124, 15, 5, 75],
-    [106, 90, 43, 5], [118, 62, 37, 5], [102, 69, 27, 5],
-    [39, 33, 36, 4], [77, 24, 51, 4], [94, 34, 35, 4]
+    {
+      "id": "qinghua",
+      "label": "road.qinghua",
+      "width": 3,
+      "points": [
+        [
+          142,
+          40
+        ],
+        [
+          135,
+          49
+        ],
+        [
+          125,
+          61
+        ],
+        [
+          119,
+          68
+        ],
+        [
+          106,
+          75
+        ],
+        [
+          94,
+          80
+        ],
+        [
+          90,
+          87
+        ],
+        [
+          85,
+          98
+        ],
+        [
+          81,
+          108
+        ],
+        [
+          79,
+          119
+        ]
+      ]
+    },
+    {
+      "id": "xuesi",
+      "label": "road.xuesi",
+      "width": 2.6,
+      "points": [
+        [
+          135,
+          82
+        ],
+        [
+          130,
+          78
+        ],
+        [
+          119,
+          72
+        ],
+        [
+          110,
+          69
+        ],
+        [
+          104,
+          64
+        ],
+        [
+          94,
+          58
+        ],
+        [
+          87,
+          53
+        ],
+        [
+          80,
+          47
+        ]
+      ]
+    },
+    {
+      "id": "ziqiang",
+      "label": "road.ziqiang",
+      "width": 2.3,
+      "points": [
+        [
+          103,
+          43
+        ],
+        [
+          99,
+          47
+        ],
+        [
+          86,
+          47
+        ],
+        [
+          71,
+          47
+        ],
+        [
+          63,
+          52
+        ],
+        [
+          62,
+          63
+        ],
+        [
+          63,
+          80
+        ],
+        [
+          74,
+          80
+        ],
+        [
+          83,
+          80
+        ]
+      ]
+    },
+    {
+      "id": "xingsheng",
+      "label": "road.xingsheng",
+      "width": 2.2,
+      "points": [
+        [
+          78,
+          57
+        ],
+        [
+          80,
+          52
+        ],
+        [
+          79,
+          42
+        ],
+        [
+          78,
+          34
+        ],
+        [
+          69,
+          31
+        ],
+        [
+          56,
+          31
+        ],
+        [
+          44,
+          31
+        ],
+        [
+          40,
+          42
+        ],
+        [
+          40,
+          55
+        ],
+        [
+          37,
+          63
+        ]
+      ]
+    },
+    {
+      "id": "xiyuan",
+      "label": "road.xiyuan",
+      "width": 2,
+      "points": [
+        [
+          44,
+          17
+        ],
+        [
+          57,
+          21
+        ],
+        [
+          71,
+          28
+        ],
+        [
+          78,
+          34
+        ]
+      ]
+    },
+    {
+      "id": "fengyun",
+      "label": "road.fengyun",
+      "width": 1.8,
+      "points": [
+        [
+          85,
+          98
+        ],
+        [
+          85,
+          105
+        ],
+        [
+          95,
+          108
+        ],
+        [
+          97,
+          119
+        ],
+        [
+          110,
+          119
+        ],
+        [
+          114,
+          119
+        ]
+      ]
+    },
+    {
+      "id": "zhaiqun_1",
+      "label": "road.zhaiqun_1",
+      "width": 1.8,
+      "points": [
+        [
+          85,
+          98
+        ],
+        [
+          84,
+          105
+        ],
+        [
+          95,
+          108
+        ],
+        [
+          97,
+          119
+        ],
+        [
+          106,
+          119
+        ],
+        [
+          122,
+          119
+        ],
+        [
+          136,
+          120
+        ],
+        [
+          138,
+          114
+        ],
+        [
+          136,
+          107
+        ],
+        [
+          124,
+          107
+        ],
+        [
+          111,
+          108
+        ],
+        [
+          99,
+          108
+        ],
+        [
+          97,
+          106
+        ],
+        [
+          95,
+          104
+        ],
+        [
+          95,
+          97
+        ],
+        [
+          85,
+          98
+        ]
+      ]
+    },
+    {
+      "id": "zhaiqun_2",
+      "label": "road.zhaiqun_2",
+      "width": 1.7,
+      "points": [
+        [
+          84,
+          105
+        ],
+        [
+          79,
+          112
+        ],
+        [
+          80,
+          122
+        ],
+        [
+          85,
+          132
+        ],
+        [
+          94,
+          138
+        ],
+        [
+          100,
+          137
+        ]
+      ]
+    },
+    {
+      "id": "dorm_link",
+      "label": "road.dorm_link",
+      "width": 1.5,
+      "points": [
+        [
+          106,
+          119
+        ],
+        [
+          95,
+          120
+        ],
+        [
+          95,
+          131
+        ],
+        [
+          112,
+          132
+        ],
+        [
+          125,
+          128
+        ]
+      ]
+    },
+    {
+      "id": "houde",
+      "label": "road.houde",
+      "width": 2.4,
+      "points": [
+        [
+          79,
+          119
+        ],
+        [
+          73,
+          124
+        ],
+        [
+          65,
+          131
+        ],
+        [
+          59,
+          137
+        ],
+        [
+          53,
+          141
+        ],
+        [
+          47,
+          147
+        ],
+        [
+          41,
+          155
+        ],
+        [
+          35,
+          164
+        ],
+        [
+          30,
+          173
+        ],
+        [
+          26,
+          182
+        ],
+        [
+          26,
+          188
+        ],
+        [
+          32,
+          188
+        ]
+      ]
+    },
+    {
+      "id": "zaiwu",
+      "label": "road.zaiwu",
+      "width": 2.4,
+      "points": [
+        [
+          79,
+          119
+        ],
+        [
+          82,
+          125
+        ],
+        [
+          82,
+          136
+        ],
+        [
+          81,
+          145
+        ],
+        [
+          81,
+          155
+        ],
+        [
+          78,
+          164
+        ],
+        [
+          73,
+          173
+        ],
+        [
+          70,
+          180
+        ],
+        [
+          68,
+          188
+        ],
+        [
+          67,
+          193
+        ],
+        [
+          59,
+          198
+        ],
+        [
+          56,
+          201
+        ],
+        [
+          51,
+          200
+        ],
+        [
+          43,
+          196
+        ],
+        [
+          32,
+          188
+        ]
+      ]
+    },
+    {
+      "id": "yuanke",
+      "label": "road.yuanke",
+      "width": 1.6,
+      "points": [
+        [
+          82,
+          136
+        ],
+        [
+          74,
+          136
+        ],
+        [
+          72,
+          141
+        ],
+        [
+          72,
+          151
+        ],
+        [
+          81,
+          155
+        ]
+      ]
+    },
+    {
+      "id": "meiyuan",
+      "label": "road.meiyuan",
+      "width": 1.5,
+      "points": [
+        [
+          63,
+          80
+        ],
+        [
+          61,
+          87
+        ],
+        [
+          66,
+          93
+        ],
+        [
+          75,
+          96
+        ],
+        [
+          85,
+          98
+        ]
+      ]
+    },
+    {
+      "id": "alumni_gym",
+      "label": "road.alumni_gym",
+      "width": 1.7,
+      "points": [
+        [
+          40,
+          55
+        ],
+        [
+          48,
+          57
+        ],
+        [
+          62,
+          59
+        ]
+      ]
+    },
+    {
+      "id": "huannan",
+      "label": "road.huannan",
+      "width": 2,
+      "points": [
+        [
+          26,
+          182
+        ],
+        [
+          15,
+          177
+        ],
+        [
+          6,
+          176
+        ],
+        [
+          3,
+          171
+        ],
+        [
+          8,
+          164
+        ],
+        [
+          16,
+          162
+        ],
+        [
+          21,
+          169
+        ],
+        [
+          26,
+          182
+        ]
+      ]
+    }
   ],
-  "waters": [[31, 72, 25, 17], [35, 69, 17, 23]],
-  "sports_fields": [[130, 68, 20, 14], [132, 55, 17, 6]],
+  "waters": [
+    {
+      "id": "success_lake_water",
+      "points": [
+        [
+          101,
+          77.7
+        ],
+        [
+          105,
+          76
+        ],
+        [
+          112,
+          76
+        ],
+        [
+          120,
+          78.55
+        ],
+        [
+          129,
+          81.95
+        ],
+        [
+          135,
+          86.2
+        ],
+        [
+          137,
+          89.6
+        ],
+        [
+          136,
+          92.15
+        ],
+        [
+          133,
+          94.7
+        ],
+        [
+          132,
+          97.25
+        ],
+        [
+          128,
+          98.1
+        ],
+        [
+          123,
+          97.25
+        ],
+        [
+          119,
+          98.1
+        ],
+        [
+          116,
+          100.65
+        ],
+        [
+          112,
+          103.2
+        ],
+        [
+          107,
+          104.9
+        ],
+        [
+          103,
+          105.75
+        ],
+        [
+          100,
+          104.9
+        ],
+        [
+          98,
+          103.2
+        ],
+        [
+          97,
+          99.8
+        ],
+        [
+          98,
+          96.4
+        ],
+        [
+          102,
+          93.85
+        ],
+        [
+          104,
+          91.3
+        ],
+        [
+          103,
+          88.75
+        ],
+        [
+          100,
+          87.05
+        ],
+        [
+          97,
+          86.2
+        ],
+        [
+          96,
+          83.65
+        ],
+        [
+          98,
+          80.25
+        ]
+      ]
+    },
+    {
+      "id": "kunming_lake",
+      "points": [
+        [
+          85,
+          73
+        ],
+        [
+          88,
+          72.5
+        ],
+        [
+          90,
+          74
+        ],
+        [
+          90,
+          78
+        ],
+        [
+          88,
+          82
+        ],
+        [
+          85,
+          82.5
+        ],
+        [
+          83.5,
+          79
+        ],
+        [
+          84,
+          75
+        ]
+      ]
+    },
+    {
+      "id": "xiangsi_lake",
+      "points": [
+        [
+          29,
+          120
+        ],
+        [
+          35,
+          119
+        ],
+        [
+          40,
+          120
+        ],
+        [
+          42,
+          123
+        ],
+        [
+          39,
+          126
+        ],
+        [
+          32,
+          126
+        ],
+        [
+          28,
+          124
+        ]
+      ]
+    },
+    {
+      "id": "lotus_pond",
+      "points": [
+        [
+          75,
+          124
+        ],
+        [
+          79,
+          124
+        ],
+        [
+          81,
+          127
+        ],
+        [
+          80,
+          133
+        ],
+        [
+          77,
+          133
+        ],
+        [
+          74,
+          130
+        ]
+      ]
+    }
+  ],
+  "islands": [
+    {
+      "id": "lake_heart",
+      "label": "lake.jimei",
+      "points": [
+        [
+          107,
+          88.75
+        ],
+        [
+          109,
+          88.5
+        ],
+        [
+          110,
+          89.6
+        ],
+        [
+          109.6,
+          91.3
+        ],
+        [
+          107.6,
+          91.73
+        ],
+        [
+          106.4,
+          90.45
+        ]
+      ],
+      "center": [
+        108.3,
+        90.11
+      ],
+      "pavilion": true
+    },
+    {
+      "id": "yuning_island",
+      "label": "lake.yuning",
+      "points": [
+        [
+          129.8,
+          95.38
+        ],
+        [
+          131.8,
+          95.13
+        ],
+        [
+          132.6,
+          96.4
+        ],
+        [
+          131.5,
+          97.25
+        ],
+        [
+          130,
+          97.08
+        ]
+      ],
+      "center": [
+        131,
+        96.23
+      ],
+      "pavilion": true
+    }
+  ],
+  "walkways": [
+    {
+      "id": "lake_loop",
+      "label": "lake.loop",
+      "width": 1,
+      "points": [
+        [
+          100,
+          76
+        ],
+        [
+          105,
+          74.72
+        ],
+        [
+          113,
+          74.72
+        ],
+        [
+          121,
+          76.85
+        ],
+        [
+          130,
+          80.68
+        ],
+        [
+          137,
+          85.35
+        ],
+        [
+          139,
+          89.6
+        ],
+        [
+          138,
+          93
+        ],
+        [
+          135,
+          95.55
+        ],
+        [
+          133,
+          98.95
+        ],
+        [
+          128,
+          99.8
+        ],
+        [
+          123,
+          98.95
+        ],
+        [
+          120,
+          99.8
+        ],
+        [
+          117,
+          102.35
+        ],
+        [
+          113,
+          104.9
+        ],
+        [
+          107,
+          106.6
+        ],
+        [
+          102,
+          107.45
+        ],
+        [
+          98,
+          106.6
+        ],
+        [
+          96,
+          104.05
+        ],
+        [
+          95,
+          99.8
+        ],
+        [
+          96,
+          96.4
+        ],
+        [
+          100,
+          93.85
+        ],
+        [
+          102,
+          91.3
+        ],
+        [
+          101,
+          89.6
+        ],
+        [
+          98,
+          88.75
+        ],
+        [
+          95,
+          87.05
+        ],
+        [
+          94,
+          83.65
+        ],
+        [
+          96,
+          79.4
+        ],
+        [
+          100,
+          76
+        ]
+      ]
+    },
+    {
+      "id": "kegong_bridge",
+      "label": "lake.kegong",
+      "width": 1.2,
+      "points": [
+        [
+          100,
+          93.85
+        ],
+        [
+          108.3,
+          90.11
+        ]
+      ],
+      "bridge": true
+    },
+    {
+      "id": "keqin_bridge",
+      "label": "lake.keqin",
+      "width": 1.2,
+      "points": [
+        [
+          133,
+          98.95
+        ],
+        [
+          131,
+          96.23
+        ]
+      ],
+      "bridge": true
+    },
+    {
+      "id": "ecology_boardwalk",
+      "label": "lake.ecology",
+      "width": 0.9,
+      "points": [
+        [
+          100,
+          76
+        ],
+        [
+          97,
+          79.4
+        ],
+        [
+          95,
+          83.65
+        ],
+        [
+          96,
+          87.05
+        ],
+        [
+          98,
+          88.75
+        ]
+      ],
+      "bridge": true
+    },
+    {
+      "id": "lake_west_entry",
+      "label": "lake.west_entry",
+      "width": 1.5,
+      "points": [
+        [
+          94,
+          80
+        ],
+        [
+          95,
+          84
+        ],
+        [
+          94,
+          85
+        ]
+      ]
+    },
+    {
+      "id": "campus_green_loop",
+      "label": "path.campus_green_loop",
+      "width": 1.1,
+      "points": [
+        [
+          119,
+          50
+        ],
+        [
+          132,
+          51
+        ],
+        [
+          126,
+          59
+        ],
+        [
+          120,
+          65
+        ],
+        [
+          118,
+          60
+        ],
+        [
+          119,
+          50
+        ]
+      ]
+    },
+    {
+      "id": "lawn_west_walk",
+      "label": "path.lawn_west_walk",
+      "width": 1.1,
+      "points": [
+        [
+          118,
+          50
+        ],
+        [
+          118,
+          56
+        ],
+        [
+          118,
+          61
+        ],
+        [
+          119,
+          68
+        ]
+      ]
+    },
+    {
+      "id": "education_link",
+      "label": "path.education_link",
+      "width": 1.1,
+      "points": [
+        [
+          96,
+          53.5
+        ],
+        [
+          95.5,
+          61.5
+        ],
+        [
+          105.5,
+          61.5
+        ],
+        [
+          105.5,
+          55.5
+        ],
+        [
+          110.5,
+          56
+        ],
+        [
+          118,
+          56
+        ]
+      ]
+    },
+    {
+      "id": "general4_north_approach",
+      "label": "path.general4_north_approach",
+      "width": 1.3,
+      "points": [
+        [
+          142,
+          40
+        ],
+        [
+          151,
+          46
+        ],
+        [
+          151,
+          54
+        ],
+        [
+          143.5,
+          54
+        ]
+      ]
+    },
+    {
+      "id": "gate_green_corridor",
+      "label": "path.gate_green_corridor",
+      "width": 1.3,
+      "points": [
+        [
+          142,
+          40
+        ],
+        [
+          137,
+          43
+        ],
+        [
+          133,
+          47
+        ],
+        [
+          132,
+          51
+        ]
+      ]
+    },
+    {
+      "id": "grass_clock_link",
+      "label": "path.grass_clock_link",
+      "width": 1,
+      "points": [
+        [
+          120,
+          65
+        ],
+        [
+          120,
+          67
+        ],
+        [
+          119,
+          68
+        ]
+      ]
+    }
+  ],
+  "lake_features": [
+    {
+      "id": "octagonal_pavilion",
+      "label": "lake.octagonal",
+      "tile": [
+        116,
+        75.15
+      ],
+      "kind": "pavilion"
+    },
+    {
+      "id": "progress_pier",
+      "label": "lake.pier",
+      "tile": [
+        97,
+        86.2
+      ],
+      "kind": "pier"
+    },
+    {
+      "id": "waterfront_steps",
+      "label": "lake.steps",
+      "tile": [
+        100,
+        76
+      ],
+      "kind": "steps"
+    },
+    {
+      "id": "garden_1970",
+      "label": "lake.garden",
+      "tile": [
+        98,
+        109
+      ],
+      "kind": "garden"
+    }
+  ],
+  "sports_fields": [
+    [
+      43,
+      62,
+      15,
+      21
+    ],
+    [
+      48,
+      35,
+      13,
+      8
+    ]
+  ],
   "buildings": [
-    {"id": "admin_hall", "rect": [42, 89, 13, 6], "label": "landmark.admin_hall", "color": "brick", "style": "admin"},
-    {"id": "main_library", "rect": [61, 74, 15, 8], "label": "landmark.main_library", "color": "purple", "style": "macronix"},
-    {"id": "general_1", "rect": [49, 52, 13, 5], "label": "landmark.general_1", "color": "brick", "style": "general"},
-    {"id": "general_2", "rect": [79, 52, 13, 5], "label": "landmark.general_2", "color": "purple", "style": "general_tower"},
-    {"id": "physics", "rect": [81, 41, 13, 6], "label": "landmark.physics", "color": "purple", "style": "science"},
-    {"id": "engineering_1", "rect": [101, 41, 16, 6], "label": "landmark.engineering_1", "color": "brick", "style": "engineering"},
-    {"id": "engineering_2", "rect": [103, 62, 16, 7], "label": "landmark.engineering_2", "color": "brick", "style": "engineering"},
-    {"id": "student_center", "rect": [28, 53, 13, 7], "label": "landmark.student_center", "color": "purple", "style": "activity"},
-    {"id": "dining_hall", "rect": [44, 61, 11, 5], "label": "landmark.dining_hall", "color": "brick", "style": "dining"},
-    {"id": "gym", "rect": [130, 52, 18, 9], "label": "landmark.gym", "color": "purple", "style": "gym"},
-    {"id": "humanities_building", "rect": [54, 22, 14, 10], "label": "landmark.humanities", "color": "brick", "style": "humanities"},
-    {"id": "education", "rect": [79, 28, 13, 7], "label": "landmark.education", "color": "purple", "style": "education"},
-    {"id": "ren_hall", "rect": [27, 22, 14, 7], "label": "landmark.ren_hall", "color": "brick", "style": "old_dorm"},
-    {"id": "shi_hall", "rect": [41, 29, 13, 7], "label": "landmark.shi_hall", "color": "purple", "style": "old_dorm"},
-    {"id": "li_hall", "rect": [7, 29, 12, 8], "label": "landmark.li_hall", "color": "brick", "style": "old_dorm"},
-    {"id": "yi_hall", "rect": [7, 20, 13, 7], "label": "landmark.yi_hall", "color": "purple", "style": "old_dorm"},
-    {"id": "auditorium", "rect": [27, 42, 13, 7], "label": "landmark.auditorium", "color": "brick", "style": "auditorium"},
-    {"id": "museum", "rect": [59, 38, 12, 8], "label": "landmark.museum", "color": "purple", "style": "museum"},
-    {"id": "chemistry", "rect": [96, 28, 13, 6], "label": "landmark.chemistry", "color": "brick", "style": "science"},
-    {"id": "electrical", "rect": [111, 28, 12, 6], "label": "landmark.electrical", "color": "purple", "style": "engineering"},
-    {"id": "computer_science", "rect": [131, 26, 15, 7], "label": "landmark.computer_science", "color": "brick", "style": "engineering"},
-    {"id": "delta_hall", "rect": [133, 35, 14, 7], "label": "landmark.delta_hall", "color": "purple", "style": "modern"},
-    {"id": "natural_science", "rect": [80, 7, 15, 7], "label": "landmark.natural_science", "color": "brick", "style": "science"},
-    {"id": "biomedical", "rect": [103, 7, 15, 7], "label": "landmark.biomedical", "color": "purple", "style": "modern"},
-    {"id": "south_lab", "rect": [133, 7, 15, 7], "label": "landmark.south_lab", "color": "brick", "style": "modern"},
-    {"id": "faculty_housing", "rect": [143, 20, 13, 8], "label": "landmark.faculty_housing", "color": "purple", "style": "housing"}
+    {
+      "id": "admin_hall",
+      "rect": [
+        107,
+        58,
+        10,
+        7
+      ],
+      "label": "landmark.admin_hall",
+      "color": "brick",
+      "style": "admin",
+      "access": [
+        [
+          111.5,
+          68
+        ],
+        [
+          110,
+          69
+        ]
+      ]
+    },
+    {
+      "id": "main_library",
+      "rect": [
+        104,
+        48,
+        13,
+        6
+      ],
+      "label": "landmark.main_library",
+      "color": "purple",
+      "style": "macronix",
+      "access": [
+        [
+          110.5,
+          56
+        ],
+        [
+          118,
+          56
+        ],
+        [
+          120,
+          60
+        ],
+        [
+          125,
+          61
+        ]
+      ]
+    },
+    {
+      "id": "general_2",
+      "rect": [
+        92,
+        65,
+        9,
+        8
+      ],
+      "label": "landmark.general_2",
+      "color": "purple",
+      "style": "general_tower",
+      "access": [
+        [
+          96.5,
+          75
+        ],
+        [
+          94,
+          80
+        ]
+      ]
+    },
+    {
+      "id": "physics",
+      "rect": [
+        80,
+        64,
+        9,
+        6
+      ],
+      "label": "landmark.physics",
+      "color": "purple",
+      "style": "science",
+      "access": [
+        [
+          84.5,
+          72
+        ],
+        [
+          82,
+          72
+        ],
+        [
+          81.5,
+          79
+        ],
+        [
+          82.5,
+          80
+        ]
+      ]
+    },
+    {
+      "id": "engineering_1",
+      "rect": [
+        130,
+        57,
+        13,
+        8
+      ],
+      "label": "landmark.engineering_1",
+      "color": "brick",
+      "style": "engineering",
+      "access": [
+        [
+          136.5,
+          68
+        ],
+        [
+          119,
+          68
+        ]
+      ]
+    },
+    {
+      "id": "engineering_2",
+      "rect": [
+        82,
+        36,
+        10,
+        6
+      ],
+      "label": "landmark.engineering_2",
+      "color": "brick",
+      "style": "engineering",
+      "access": [
+        [
+          87,
+          45
+        ],
+        [
+          87,
+          47
+        ]
+      ]
+    },
+    {
+      "id": "student_center",
+      "rect": [
+        99,
+        113,
+        10,
+        4
+      ],
+      "label": "landmark.student_center",
+      "color": "purple",
+      "style": "activity",
+      "access": [
+        [
+          104,
+          119
+        ],
+        [
+          110,
+          119
+        ]
+      ]
+    },
+    {
+      "id": "dining_hall",
+      "rect": [
+        87,
+        99,
+        7,
+        4
+      ],
+      "label": "landmark.dining_hall",
+      "color": "brick",
+      "style": "dining",
+      "access": [
+        [
+          90.5,
+          105
+        ],
+        [
+          95,
+          106
+        ],
+        [
+          95,
+          108
+        ]
+      ]
+    },
+    {
+      "id": "gym",
+      "rect": [
+        65,
+        74,
+        10,
+        5
+      ],
+      "label": "landmark.gym",
+      "color": "purple",
+      "style": "gym",
+      "access": [
+        [
+          70,
+          80
+        ]
+      ]
+    },
+    {
+      "id": "humanities_building",
+      "rect": [
+        29,
+        136,
+        13,
+        8
+      ],
+      "label": "landmark.humanities",
+      "color": "brick",
+      "style": "humanities",
+      "access": [
+        [
+          35.5,
+          147
+        ],
+        [
+          47,
+          147
+        ]
+      ]
+    },
+    {
+      "id": "education",
+      "rect": [
+        92,
+        48,
+        10,
+        4
+      ],
+      "label": "landmark.education",
+      "color": "purple",
+      "style": "education",
+      "access": [
+        [
+          96,
+          53.4
+        ],
+        [
+          95.5,
+          55
+        ],
+        [
+          94,
+          58
+        ]
+      ]
+    },
+    {
+      "id": "ren_hall",
+      "rect": [
+        123,
+        110,
+        10,
+        7
+      ],
+      "label": "landmark.ren_hall",
+      "color": "brick",
+      "style": "old_dorm",
+      "access": [
+        [
+          128,
+          119
+        ]
+      ]
+    },
+    {
+      "id": "shi_hall",
+      "rect": [
+        111,
+        109,
+        10,
+        7
+      ],
+      "label": "landmark.shi_hall",
+      "color": "purple",
+      "style": "old_dorm",
+      "access": [
+        [
+          116,
+          119
+        ]
+      ]
+    },
+    {
+      "id": "li_hall",
+      "rect": [
+        110,
+        121,
+        10,
+        7
+      ],
+      "label": "landmark.li_hall",
+      "color": "brick",
+      "style": "old_dorm",
+      "access": [
+        [
+          115,
+          131
+        ],
+        [
+          112,
+          132
+        ]
+      ]
+    },
+    {
+      "id": "yi_hall",
+      "rect": [
+        97,
+        121,
+        10,
+        7
+      ],
+      "label": "landmark.yi_hall",
+      "color": "purple",
+      "style": "old_dorm",
+      "access": [
+        [
+          102,
+          131
+        ],
+        [
+          112,
+          132
+        ]
+      ]
+    },
+    {
+      "id": "xin_hall",
+      "rect": [
+        82,
+        110,
+        13,
+        7
+      ],
+      "label": "landmark.xin_hall",
+      "color": "purple",
+      "style": "xin_dorm",
+      "access": [
+        [
+          88.5,
+          120
+        ],
+        [
+          96,
+          120
+        ]
+      ]
+    },
+    {
+      "id": "auditorium",
+      "rect": [
+        91,
+        91,
+        5,
+        4
+      ],
+      "label": "landmark.auditorium",
+      "color": "brick",
+      "style": "auditorium",
+      "access": [
+        [
+          93.5,
+          96.5
+        ],
+        [
+          86,
+          96.5
+        ],
+        [
+          85,
+          98
+        ]
+      ]
+    },
+    {
+      "id": "museum",
+      "rect": [
+        55,
+        123,
+        10,
+        6
+      ],
+      "label": "landmark.museum",
+      "color": "purple",
+      "style": "museum",
+      "access": [
+        [
+          60,
+          135
+        ],
+        [
+          59,
+          137
+        ]
+      ]
+    },
+    {
+      "id": "chemistry",
+      "rect": [
+        123,
+        37,
+        10,
+        9
+      ],
+      "label": "landmark.chemistry",
+      "color": "brick",
+      "style": "science",
+      "access": [
+        [
+          128,
+          48
+        ],
+        [
+          135,
+          49
+        ]
+      ]
+    },
+    {
+      "id": "computer_science",
+      "rect": [
+        70,
+        50,
+        8,
+        5
+      ],
+      "label": "landmark.computer_science",
+      "color": "brick",
+      "style": "engineering",
+      "access": [
+        [
+          74,
+          56
+        ],
+        [
+          65,
+          56
+        ],
+        [
+          62,
+          59
+        ]
+      ]
+    },
+    {
+      "id": "delta_hall",
+      "rect": [
+        68,
+        39,
+        10,
+        7
+      ],
+      "label": "landmark.delta_hall",
+      "color": "purple",
+      "style": "modern",
+      "access": [
+        [
+          73,
+          47
+        ]
+      ]
+    },
+    {
+      "id": "natural_science",
+      "rect": [
+        49,
+        149,
+        10,
+        6
+      ],
+      "label": "landmark.natural_science",
+      "color": "brick",
+      "style": "science",
+      "access": [
+        [
+          54,
+          158
+        ],
+        [
+          41,
+          155
+        ]
+      ]
+    },
+    {
+      "id": "biomedical",
+      "rect": [
+        63,
+        153,
+        9,
+        7
+      ],
+      "label": "landmark.biomedical",
+      "color": "purple",
+      "style": "modern",
+      "access": [
+        [
+          67.5,
+          162
+        ],
+        [
+          78,
+          164
+        ]
+      ]
+    },
+    {
+      "id": "south_lab",
+      "rect": [
+        46,
+        189,
+        11,
+        6
+      ],
+      "label": "landmark.south_lab",
+      "color": "brick",
+      "style": "modern",
+      "access": [
+        [
+          51.5,
+          198
+        ],
+        [
+          51,
+          200
+        ]
+      ]
+    },
+    {
+      "id": "faculty_housing",
+      "rect": [
+        52,
+        11,
+        12,
+        7
+      ],
+      "label": "landmark.faculty_housing",
+      "color": "purple",
+      "style": "housing",
+      "access": [
+        [
+          58,
+          20
+        ],
+        [
+          65,
+          27
+        ],
+        [
+          71,
+          28
+        ]
+      ]
+    },
+    {
+      "id": "general_4",
+      "rect": [
+        138,
+        48,
+        11,
+        4
+      ],
+      "label": "landmark.general_4",
+      "color": "purple",
+      "style": "general4",
+      "access": [
+        [
+          143.5,
+          54
+        ],
+        [
+          151,
+          54
+        ],
+        [
+          151,
+          46
+        ],
+        [
+          142,
+          40
+        ]
+      ]
+    },
+    {
+      "id": "chemical_engineering",
+      "rect": [
+        111,
+        35,
+        10,
+        8
+      ],
+      "label": "landmark.chemical_engineering",
+      "color": "purple",
+      "style": "chemical",
+      "access": [
+        [
+          116,
+          45
+        ],
+        [
+          121,
+          46
+        ],
+        [
+          128,
+          48
+        ],
+        [
+          135,
+          49
+        ]
+      ]
+    },
+    {
+      "id": "clinic",
+      "rect": [
+        102,
+        36,
+        7,
+        6
+      ],
+      "label": "landmark.clinic",
+      "color": "purple",
+      "style": "clinic",
+      "access": [
+        [
+          105.5,
+          45
+        ],
+        [
+          111,
+          46
+        ],
+        [
+          121,
+          46
+        ]
+      ]
+    },
+    {
+      "id": "general_3",
+      "rect": [
+        97,
+        54,
+        7,
+        5
+      ],
+      "label": "landmark.general_3",
+      "color": "purple",
+      "style": "general_tower",
+      "access": [
+        [
+          100.5,
+          63
+        ],
+        [
+          104,
+          64
+        ]
+      ]
+    },
+    {
+      "id": "old_incubator",
+      "rect": [
+        143,
+        56,
+        6,
+        3
+      ],
+      "label": "landmark.old_incubator",
+      "color": "purple",
+      "style": "incubator",
+      "access": [
+        [
+          146,
+          61
+        ],
+        [
+          145,
+          68
+        ],
+        [
+          134.5,
+          68
+        ]
+      ]
+    },
+    {
+      "id": "mechanical_chemistry",
+      "rect": [
+        113,
+        28,
+        10,
+        5
+      ],
+      "label": "landmark.mechanical_chemistry",
+      "color": "purple",
+      "style": "old_lab",
+      "access": [
+        [
+          118,
+          34
+        ],
+        [
+          125,
+          35
+        ],
+        [
+          135,
+          35
+        ],
+        [
+          139,
+          43
+        ],
+        [
+          135,
+          49
+        ]
+      ]
+    },
+    {
+      "id": "materials_tech",
+      "rect": [
+        66,
+        34,
+        10,
+        4
+      ],
+      "label": "landmark.materials_tech",
+      "color": "purple",
+      "style": "materials",
+      "access": [
+        [
+          71,
+          38.6
+        ],
+        [
+          79.5,
+          38.6
+        ],
+        [
+          79,
+          42
+        ]
+      ]
+    },
+    {
+      "id": "materials_lab",
+      "rect": [
+        54,
+        33,
+        10,
+        4
+      ],
+      "label": "landmark.materials_lab",
+      "color": "purple",
+      "style": "low_lab",
+      "access": [
+        [
+          59,
+          40
+        ],
+        [
+          65,
+          46.8
+        ],
+        [
+          73,
+          47
+        ]
+      ]
+    },
+    {
+      "id": "alloy_lab",
+      "rect": [
+        43,
+        25,
+        9,
+        4
+      ],
+      "label": "landmark.alloy_lab",
+      "color": "purple",
+      "style": "low_lab",
+      "access": [
+        [
+          47.5,
+          31
+        ],
+        [
+          56,
+          31
+        ]
+      ]
+    }
+  ],
+  "npc_positions": {
+    "guide": [
+      140,
+      43
+    ],
+    "librarian": [
+      121,
+      59
+    ],
+    "photographer": [
+      94,
+      84
+    ],
+    "professor": [
+      102,
+      65
+    ],
+    "runner": [
+      60,
+      76
+    ],
+    "engineer": [
+      85,
+      44
+    ],
+    "artist": [
+      46,
+      138
+    ],
+    "roommate": [
+      95,
+      120
+    ],
+    "vendor": [
+      90,
+      105
+    ],
+    "researcher": [
+      72,
+      162
+    ],
+    "alumnus": [
+      93,
+      88
+    ],
+    "birdwatcher": [
+      95,
+      102
+    ],
+    "club_leader": [
+      110,
+      119
+    ],
+    "caretaker": [
+      46,
+      20
+    ],
+    "student": [
+      80,
+      52
+    ]
+  },
+  "shops": [
+    {
+      "id": "dining",
+      "tile": [
+        90,
+        105
+      ],
+      "kind": "meal"
+    },
+    {
+      "id": "store",
+      "tile": [
+        111,
+        119
+      ],
+      "kind": "water"
+    }
+  ],
+  "landscapes": [
+    {
+      "id": "big_lawn",
+      "kind": "lawn",
+      "label": "landmark.big_lawn",
+      "points": [
+        [
+          119,
+          50
+        ],
+        [
+          132,
+          51
+        ],
+        [
+          126,
+          59
+        ],
+        [
+          120,
+          65
+        ],
+        [
+          118,
+          60
+        ]
+      ],
+      "source": "https://affairs.site.nthu.edu.tw/p/406-1165-56561,r3514.php?Lang=zh-tw"
+    },
+    {
+      "id": "north_gate_plaza",
+      "kind": "plaza",
+      "label": "landmark.north_gate",
+      "points": [
+        [
+          138,
+          33
+        ],
+        [
+          151,
+          34
+        ],
+        [
+          155,
+          40
+        ],
+        [
+          149,
+          45
+        ],
+        [
+          141,
+          44
+        ],
+        [
+          136,
+          39
+        ]
+      ],
+      "source": "https://www.lib.nthu.edu.tw/events/2023/scenery/index.html"
+    }
+  ],
+  "scenery_points": [
+    {
+      "id": "big_lawn",
+      "label": "landmark.big_lawn",
+      "tile": [
+        122,
+        57
+      ],
+      "note": "campus.note.big_lawn"
+    },
+    {
+      "id": "north_gate",
+      "label": "landmark.north_gate",
+      "tile": [
+        142,
+        39
+      ],
+      "note": "campus.note.north_gate"
+    },
+    {
+      "id": "triangle_clock",
+      "label": "landmark.triangle_clock",
+      "tile": [
+        120,
+        67
+      ],
+      "note": "campus.note.triangle_clock"
+    }
   ]
 }

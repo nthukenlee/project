@@ -1,4 +1,11 @@
 {
+  "xin_hall": {
+    "name": "新齋", "floors_visible": null,
+    "features": ["灰白小面磚直向柱帶", "褐色凹入窗帶與窗外冷氣", "中央圓形開口", "弧形陽台欄板", "中央山牆圓形通風窗"],
+    "source": "https://sthousing.site.nthu.edu.tw/p/404-1254-13727.php?Lang=zh-tw",
+    "photos": ["https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/449/IMG_1111.jpg", "https://sthousing.site.nthu.edu.tw/var/file/254/1254/img/449/IMG_1088.jpg"],
+    "note": "依官方照片的立面特徵展開為平面 2D 圖；A/B/C 翼及不同地坪高程壓縮為一處可進入的遊戲建築，非完整測繪。"
+  },
   "ren_hall": {
     "atlas": [0,0], "name": "仁齋", "floors_visible": 4,
     "features": ["灰白小面磚", "紅褐水平帶", "T 字形窗與窗外冷氣", "圓弧樓梯塔", "綠色入口雨棚"],

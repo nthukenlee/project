@@ -4,7 +4,7 @@ import math
 from pathlib import Path
 import pygame
 from .constants import INTERNAL_WIDTH, INTERNAL_HEIGHT, WINDOW_SIZE, FPS, TILE, WORLD_WIDTH, WORLD_HEIGHT
-from .content import BUILDINGS, NPCS, QUESTS, ZONES, SHOPS, DORMS, tile_center, validate_content
+from .content import BUILDINGS, NPCS, QUESTS, ZONES, SHOPS, DORMS, ARCHITECTURE, SCENERY_POINTS, ROADS, LAKE_POINTS, LAKE_ENTRANCE_TILE, SPAWN_TILE, tile_center, validate_content
 from .state import GameState, QuestSystem
 from .savegame import SaveManager
 from .localization import Localizer
@@ -16,7 +16,7 @@ class Game:
     def __init__(self,save_dir: Path|None=None):
         if errors:=validate_content(): raise ValueError(str(errors))
         pygame.init()
-        pygame.display.set_caption('清華拾光 · 2D 手繪漫遊')
+        pygame.display.set_caption('清華拾光 · 校門與大草坪修訂版 v7')
         self.screen=pygame.display.set_mode(WINDOW_SIZE,pygame.RESIZABLE)
         self.canvas=pygame.Surface(WINDOW_SIZE)
         self.clock=pygame.time.Clock()
@@ -31,7 +31,9 @@ class Game:
         self.current_interior=None; self.room_position=pygame.Vector2(.5,.80)
         self.room_rect=pygame.Rect(330,74,620,620)
         self.custom_name=''; self.custom_appearance=dict(self.state.appearance)
-        self.selected_dorm='ren_hall'
+        self.selected_dorm='education';self.architecture_page=0;self.map_list_page=0
+        self.map_zoom=1.0; self.map_center=pygame.Vector2(WORLD_WIDTH/2,WORLD_HEIGHT/2)
+        self.map_drag=None; self.map_cache_key=None
 
     @property
     def t(self): return self.localizer.t
@@ -78,7 +80,7 @@ class Game:
                 point=start+pygame.Vector2(direction)*distance
                 if not self.world.collides(self._player_rect(point.x,point.y)):
                     self.state.player_x,self.state.player_y=point; return
-        self.state.player_x,self.state.player_y=tile_center((27,106))
+        self.state.player_x,self.state.player_y=tile_center(SPAWN_TILE)
 
     def _new_game(self):
         self._set_state(GameState(language=self.localizer.language,fullscreen=self.fullscreen,player_name=self.custom_name.strip()[:12] or '小華',appearance=dict(self.custom_appearance)))
@@ -93,6 +95,16 @@ class Game:
 
     def _handle_event(self,event,mouse):
         if event.type==pygame.QUIT: self.running=False; return
+        if self.scene=='map':
+            if event.type==pygame.MOUSEWHEEL:
+                self._zoom_map(1.35 if event.y>0 else 1/1.35,mouse); return
+            if event.type==pygame.MOUSEBUTTONDOWN and event.button==3:
+                self.map_drag=mouse; return
+            if event.type==pygame.MOUSEBUTTONUP and event.button==3:
+                self.map_drag=None; return
+            if event.type==pygame.MOUSEMOTION and self.map_drag is not None:
+                self.map_center-=pygame.Vector2(mouse[0]-self.map_drag[0],mouse[1]-self.map_drag[1])/self.map_scale
+                self.map_drag=mouse; return
         if event.type==pygame.TEXTINPUT and self.scene=='customize':
             self.custom_name=(self.custom_name+''.join(c for c in event.text if c.isprintable()))[:12]
         if event.type==pygame.KEYDOWN:
@@ -132,7 +144,9 @@ class Game:
         elif action=='custom_start': self._new_game()
         elif action=='continue': self._continue_game()
         elif action=='dorm_tour':
-            self._continue_game(); self._travel('ren_hall')
+            self._continue_game(); self._travel('xin_hall')
+        elif action=='campus_tour':
+            self._continue_game();self._button_action('landscape:big_lawn')
         elif action=='quit': self.running=False
         elif action in ('resume','close'): self.scene='explore'
         elif action=='leave': self._leave_special_area()
@@ -143,6 +157,25 @@ class Game:
         elif action=='language':
             self.localizer.set_language('en' if self.localizer.language=='zh_TW' else 'zh_TW'); self.state.language=self.localizer.language
         elif action=='fullscreen': self._set_fullscreen(not self.fullscreen)
+        elif action=='lake':
+            self.state.player_x,self.state.player_y=tile_center(LAKE_ENTRANCE_TILE)
+            self._ensure_walkable(); self.scene='explore'; self._record_location()
+            self._notify(self.t('lake.west_entry')); self.save_manager.save(self.state,'auto')
+        elif action=='map_plus': self._zoom_map(1.5)
+        elif action=='map_minus': self._zoom_map(1/1.5)
+        elif action=='map_reset':
+            self.map_zoom=1.0; self.map_center=pygame.Vector2(WORLD_WIDTH/2,WORLD_HEIGHT/2)
+        elif action.startswith('architecture_page:'):
+            keys=list(ARCHITECTURE)+list(DORMS)
+            self.architecture_page=(self.architecture_page+int(action.split(':')[1]))%math.ceil(len(keys)/5)
+            self.selected_dorm=keys[self.architecture_page*5]
+        elif action.startswith('map_page:'):
+            self.map_list_page=(self.map_list_page+int(action.split(':')[1]))%math.ceil(len(self._map_destinations())/7)
+        elif action.startswith('landscape:'):
+            feature=next(p for p in SCENERY_POINTS if p['id']==action.split(':')[1])
+            self.state.player_x,self.state.player_y=pygame.Vector2(feature['tile'])*TILE
+            self._ensure_walkable();self.scene='explore';self._record_location()
+            self.save_manager.save(self.state,'auto');self._notify(self.t(feature['label']))
         elif action.startswith('slot:'):
             slot=int(action.split(':')[1]); self.save_manager.save(self.state,slot); self._notify(self.t('menu.saved')); self.scene='pause'
         elif action.startswith('travel:'): self._travel(action.split(':')[1])
@@ -206,6 +239,7 @@ class Game:
         candidates=[(player.distance_to(tile_center(n['tile'])),'npc',n) for n in NPCS]
         candidates += [(player.distance_to(self.world.door(b)),'building',b) for b in BUILDINGS]
         candidates += [(player.distance_to(tile_center(s['tile'])),'shop',s) for s in SHOPS]
+        candidates += [(player.distance_to((p['tile'][0]*TILE,p['tile'][1]*TILE)),'landscape',p) for p in LAKE_POINTS+SCENERY_POINTS]
         distance,kind,value=min(candidates,key=lambda v:v[0])
         return (kind,value) if distance<65 else (None,None)
 
@@ -213,6 +247,9 @@ class Game:
         kind,item=self._nearby()
         if kind=='building':
             self.current_interior=item; self.room_position=pygame.Vector2(.5,.80); self.scene='interior'; self.riding_bike=False
+        elif kind=='landscape':
+            self.state.observations.add(('campus:' if item in SCENERY_POINTS else 'lake:')+item['id'])
+            self._notify(self.t(item.get('note','lake.note.'+item['id']))); self.audio.play('select')
         elif kind=='shop' or (kind=='npc' and item['id']=='vendor'):
             self.state.hunger=100; self.state.thirst=100; self.state.supplies={'water':3,'snack':2}
             self._notify(self.t('v5.served')); self.audio.play('select')
@@ -254,6 +291,8 @@ class Game:
 
     def _room_objects(self):
         b=self.current_interior
+        if b and b['id']=='general_4': return [('postal',(.32,.45)),('notice',(.5,.23)),('water',(.69,.68))]
+        if b and b['id']=='education': return [('seminar',(.32,.45)),('terminal',(.5,.23)),('notice',(.69,.68))]
         if b and b['id'] in DORMS:
             return [('bed',(.32,.39)),('desk',(.32,.66)),('notice',(.5,.23)),('water',(.69,.68))]
         if b and 'library' in b['id']: return [('books',(.28,.43)),('terminal',(.5,.23)),('archive',(.72,.65))]
@@ -306,8 +345,7 @@ class Game:
             elif self.scene=='save_menu': self._draw_slots(mouse)
 
     def _draw_title(self,mouse):
-        ren=next(b for b in BUILDINGS if b['id']=='ren_hall'); door=self.world.door(ren)
-        camera=self.world.camera_for(door.x,door.y)
+        camera=self.world.camera_for(123*TILE,57*TILE)
         self.canvas.blit(self.world.ground,(0,0),camera)
         for x,y,tree in self.world.trees:
             if camera.inflate(200,200).collidepoint(x,y): self.canvas.blit(tree,(x-camera.x-tree.get_width()/2,y-camera.y-tree.get_height()+12))
@@ -315,7 +353,7 @@ class Game:
         panel(self.canvas,(70,75,510,570),alpha=244)
         self.fonts.draw(self.canvas,self.t('game.title'),(110,115),54,GREEN,True)
         self.fonts.draw(self.canvas,self.t('v5.subtitle'),(113,190),22,MUTED)
-        labels=[('menu.continue','continue',self.save_manager.newest_available() is not None),('menu.new_game','new',True),('v5.dorm_tour','dorm_tour',True),('menu.settings','settings',True),('menu.quit','quit',True)]
+        labels=[('menu.continue','continue',self.save_manager.newest_available() is not None),('menu.new_game','new',True),('v7.campus_tour','campus_tour',True),('menu.settings','settings',True),('menu.quit','quit',True)]
         for i,(key,action,enabled) in enumerate(labels): self._button((110,258+i*63,430,48),self.t(key),action,mouse,enabled,i==0)
         self.fonts.draw(self.canvas,self.t('game.disclaimer'),(1240,690),14,INK,False,'bottomright')
 
@@ -334,6 +372,17 @@ class Game:
     def _draw_explore(self,mouse):
         camera=self.world.camera_for(self.state.player_x,self.state.player_y)
         self.world.draw_view(self.canvas,camera,NPCS,self.state,self.player_moving,pygame.time.get_ticks())
+        for b in BUILDINGS:
+            door=self.world.door(b)
+            if camera.collidepoint(door):
+                label=self.t(b['label']); width=self.fonts.get(15).size(label)[0]+20
+                pos=(door.x-camera.x,door.y-camera.y+22)
+                panel(self.canvas,(pos[0]-width/2,pos[1],width,24),alpha=220)
+                self.fonts.draw(self.canvas,label,(pos[0],pos[1]+12),15,GREEN,False,'center')
+        for point in LAKE_POINTS+SCENERY_POINTS:
+            pos=pygame.Vector2(point['tile'])*TILE-pygame.Vector2(camera.topleft)
+            if pygame.Rect(0,125,1280,440).collidepoint(pos):
+                self.fonts.draw(self.canvas,self.t(point['label']),(pos.x,pos.y+26),16,GREEN,True,'center')
         if self.riding_bike:
             x,y=self.state.player_x-camera.x,self.state.player_y-camera.y
             for dx in (-15,15): pygame.draw.circle(self.canvas,(64,78,71),(round(x+dx),round(y-4)),11,2)
@@ -355,7 +404,7 @@ class Game:
         self.fonts.draw(self.canvas,f'D{self.state.day}  {hour:02d}:{minute:02d}',(1174,44),24,GREEN,True,'center')
         self.fonts.draw(self.canvas,self.t('v5.weather'),(1174,76),14,MUTED,False,'center')
         kind,item=self._nearby()
-        hint='E · '+self.t(item['name'] if kind=='npc' else item['label']) if kind in ('npc','building') else self.t('v5.controls')
+        hint='E · '+self.t(item['name'] if kind=='npc' else item['label']) if kind in ('npc','building','landscape') else self.t('v5.controls')
         if kind=='shop': hint=self.t('v5.shop_hint')
         width=min(1000,self.fonts.get(17).size(hint)[0]+36)
         panel(self.canvas,((1280-width)//2,583,width,33),alpha=235)
@@ -373,9 +422,12 @@ class Game:
 
     def _draw_notice(self):
         if self.notification and pygame.time.get_ticks()<self.notification_until:
-            width=min(1100,self.fonts.get(19).size(self.notification)[0]+48)
-            panel(self.canvas,((1280-width)//2,526,width,43),(235,237,222),250)
-            self.fonts.draw(self.canvas,self.notification,(640,547),19,GREEN,True,'center')
+            width=min(1100,self.fonts.get(19,True).size(self.notification)[0]+48)
+            lines=self.fonts.wrapped(self.notification,19,width-60)
+            height=22+len(lines)*27;top=569-height
+            panel(self.canvas,((1280-width)//2,top,width,height),(235,237,222),250)
+            for i,line in enumerate(lines):
+                self.fonts.draw(self.canvas,line,(640,top+11+i*27),19,GREEN,False,'midtop')
 
     def _dim(self):
         layer=pygame.Surface(WINDOW_SIZE,pygame.SRCALPHA); layer.fill((24,43,35,105)); self.canvas.blit(layer,(0,0))
@@ -389,24 +441,70 @@ class Game:
     def _draw_map(self,mouse):
         self._dim(); panel(self.canvas,(45,32,1190,655))
         self.fonts.draw(self.canvas,self.t('panel.map'),(75,55),30,GREEN,True)
-        self.map_rect=pygame.Rect(76,113,760,532)
-        self.canvas.blit(pygame.transform.smoothscale(self.world.minimap,self.map_rect.size),self.map_rect)
-        sx,sy=self.map_rect.width/WORLD_WIDTH,self.map_rect.height/WORLD_HEIGHT
+        area=pygame.Rect(76,113,760,532)
+        panel(self.canvas,area,(229,232,217))
+        self.map_scale=min(area.width/WORLD_WIDTH,area.height/WORLD_HEIGHT)*self.map_zoom
+        width=min(WORLD_WIDTH,round(area.width/self.map_scale)); height=min(WORLD_HEIGHT,round(area.height/self.map_scale))
+        self.map_center.x=max(width/2,min(WORLD_WIDTH-width/2,self.map_center.x))
+        self.map_center.y=max(height/2,min(WORLD_HEIGHT-height/2,self.map_center.y))
+        self.map_camera=pygame.Rect(round(self.map_center.x-width/2),round(self.map_center.y-height/2),width,height)
+        self.map_rect=pygame.Rect(0,0,round(width*self.map_scale),round(height*self.map_scale)); self.map_rect.center=area.center
+        cache_key=(tuple(self.map_camera),self.map_rect.size)
+        if cache_key!=self.map_cache_key:
+            source=self.world.minimap if self.map_zoom==1 else self.world.ground.subsurface(self.map_camera)
+            self.map_cache=pygame.transform.smoothscale(source,self.map_rect.size); self.map_cache_key=cache_key
+        self.canvas.blit(self.map_cache,self.map_rect)
+        def map_point(pos):
+            return round(self.map_rect.x+(pos[0]-self.map_camera.x)*self.map_scale),round(self.map_rect.y+(pos[1]-self.map_camera.y)*self.map_scale)
+        self.canvas.set_clip(self.map_rect)
         for b in BUILDINGS:
-            pos=self.world.door(b); point=(round(self.map_rect.x+pos.x*sx),round(self.map_rect.y+pos.y*sy))
+            pos=self.world.door(b); point=map_point(pos)
             pygame.draw.circle(self.canvas,GREEN,point,4)
-        pygame.draw.circle(self.canvas,(163,84,58),(round(self.map_rect.x+self.state.player_x*sx),round(self.map_rect.y+self.state.player_y*sy)),6)
-        self.fonts.draw(self.canvas,self.t('v5.map_hint'),(865,115),18,GREEN,True)
-        for i,key in enumerate(DORMS): self._button((865,175+i*64,330,48),self.t('landmark.'+key),'travel:'+key,mouse)
-        self._button((865,455,330,48),self.t('landmark.main_library'),'travel:main_library',mouse)
-        self._button((865,515,330,48),self.t('landmark.dining_hall'),'travel:dining_hall',mouse)
+            if b['id'] in ('xin_hall','main_library','humanities_building','education','general_4') or self.map_zoom>=2:
+                self.fonts.draw(self.canvas,self.t(b['label']),(point[0]+6,point[1]-2),13,GREEN,True)
+        for road in ROADS:
+            if road['id'] in ('qinghua','xuesi','zhaiqun_1','houde','zaiwu'):
+                point=map_point(pygame.Vector2(road['points'][len(road['points'])//2])*TILE)
+                self.fonts.draw(self.canvas,self.t(road['label']),point,12,(100,91,71),True)
+        for key,pos in (('zone.main_gate',SPAWN_TILE),('zone.success_lake',(119,91)),('v6.south_gate',(32,188))):
+            self.fonts.draw(self.canvas,self.t(key),map_point(pygame.Vector2(pos)*TILE),14,GREEN,True)
+        for point in SCENERY_POINTS:
+            self.fonts.draw(self.canvas,self.t(point['label']),map_point(pygame.Vector2(point['tile'])*TILE),13,GREEN,True)
+        pygame.draw.circle(self.canvas,(163,84,58),map_point((self.state.player_x,self.state.player_y)),6)
+        self.canvas.set_clip(None)
+        self.fonts.draw(self.canvas,self.t('v5.map_hint'),(855,114),16,GREEN,True)
+        destinations=self._map_destinations()
+        for i,(label,action) in enumerate(destinations[self.map_list_page*7:self.map_list_page*7+7]):
+            self._button((855,148+i*49,340,42),self.t(label),action,mouse)
+        self._button((855,504,162,39),self.t('v7.prev'),'map_page:-1',mouse)
+        self._button((1033,504,162,39),self.t('v7.next'),'map_page:1',mouse)
+        self._button((855,563,72,37),'-','map_minus',mouse)
+        self._button((934,563,72,37),'+','map_plus',mouse)
+        self._button((1013,563,182,37),self.t('v6.map_overview'),'map_reset',mouse)
+        self.fonts.draw(self.canvas,self.t('v6.map_controls'),(855,618),14,MUTED)
         self._button((1055,61,140,38),self.t('menu.back'),'close',mouse)
+
+    def _map_destinations(self):
+        featured=['general_4','education','main_library','engineering_1']
+        return [('landmark.big_lawn','landscape:big_lawn'),('landmark.north_gate','landscape:north_gate')]+[(b['label'],'travel:'+b['id']) for key in featured for b in BUILDINGS if b['id']==key]+[('zone.success_lake','lake')]+[(b['label'],'travel:'+b['id']) for b in BUILDINGS if b['id'] not in featured]
+
+    def _zoom_map(self,factor,mouse=None):
+        if mouse is not None and hasattr(self,'map_rect') and self.map_rect.collidepoint(mouse):
+            self.map_center=pygame.Vector2(self.map_camera.topleft)+(pygame.Vector2(mouse)-pygame.Vector2(self.map_rect.topleft))/self.map_scale
+        elif self.map_zoom==1 and factor>1:
+            self.map_center=pygame.Vector2(self.state.player_x,self.state.player_y)
+        self.map_zoom=max(1.0,min(5.0,self.map_zoom*factor))
 
     def _map_click(self,mouse):
         if not self.map_rect.collidepoint(mouse): return
-        x=(mouse[0]-self.map_rect.x)/self.map_rect.width*WORLD_WIDTH
-        y=(mouse[1]-self.map_rect.y)/self.map_rect.height*WORLD_HEIGHT
+        x=self.map_camera.x+(mouse[0]-self.map_rect.x)/self.map_scale
+        y=self.map_camera.y+(mouse[1]-self.map_rect.y)/self.map_scale
+        lake=pygame.Vector2(LAKE_ENTRANCE_TILE)*TILE
+        if lake.distance_to((x,y))<140: self._button_action('lake'); return
         building=min(BUILDINGS,key=lambda b:self.world.door(b).distance_to((x,y)))
+        for p in SCENERY_POINTS:
+            if pygame.Vector2(p['tile']).distance_to(pygame.Vector2(x,y)/TILE)<2:
+                self._button_action('landscape:'+p['id']);return
         if self.world.door(building).distance_to((x,y))<220: self._travel(building['id'])
 
     def _draw_notebook(self,mouse):
@@ -426,25 +524,33 @@ class Game:
     def _draw_guide(self,mouse):
         self._dim(); panel(self.canvas,(55,35,1170,650))
         self.fonts.draw(self.canvas,self.t('v5.dorm_guide'),(85,60),30,GREEN,True)
-        for i,key in enumerate(DORMS): self._button((85+i*275,115,255,44),self.t('landmark.'+key),'dorm:'+key,mouse,True,key==self.selected_dorm)
+        keys=list(ARCHITECTURE)+list(DORMS)
+        for i,key in enumerate(keys[self.architecture_page*5:self.architecture_page*5+5]): self._button((85+i*220,115,205,44),self.t('landmark.'+key),'dorm:'+key,mouse,True,key==self.selected_dorm)
         art=self.world.facades[self.selected_dorm]
         ratio=min(700/art.get_width(),400/art.get_height())
         art=pygame.transform.smoothscale(art,(round(art.get_width()*ratio),round(art.get_height()*ratio)))
         self.canvas.blit(art,art.get_rect(midbottom=(450,600)))
-        self.fonts.draw(self.canvas,self.t('landmark.'+self.selected_dorm),(845,200),28,GREEN,True)
-        for i,line in enumerate(self.fonts.wrapped(self.t('v5.dorm.'+self.selected_dorm),20,310)): self.fonts.draw(self.canvas,line,(845,255+i*31),20)
-        self.fonts.draw(self.canvas,self.t('v5.reference_note'),(845,480),15,MUTED)
+        heading=self.fonts.wrapped(self.t('landmark.'+self.selected_dorm),26,310)
+        for i,line in enumerate(heading): self.fonts.draw(self.canvas,line,(845,192+i*32),26,GREEN,True)
+        spec=ARCHITECTURE.get(self.selected_dorm)
+        description=spec['description_en' if self.localizer.language=='en' else 'description_zh'] if spec else self.t('v5.dorm.'+self.selected_dorm)
+        for i,line in enumerate(self.fonts.wrapped(description,18,310)): self.fonts.draw(self.canvas,line,(845,212+len(heading)*32+i*26),18)
+        for i,line in enumerate(self.fonts.wrapped(self.t('v5.reference_note'),15,310)): self.fonts.draw(self.canvas,line,(845,480+i*20),15,MUTED)
         self._button((845,540,310,48),self.t('v5.go_here'),'travel:'+self.selected_dorm,mouse,True,True)
         self._button((1040,62,145,38),self.t('menu.back'),'close',mouse)
+        self._button((85,624,175,39),self.t('v7.prev'),'architecture_page:-1',mouse)
+        self._button((425,624,175,39),self.t('v7.next'),'architecture_page:1',mouse)
+        self.fonts.draw(self.canvas,self.t('v7.page',page=self.architecture_page+1,total=math.ceil(len(keys)/5)),(340,644),18,MUTED,False,'center')
 
     def _draw_interior(self,mouse):
         b=self.current_interior or BUILDINGS[0]
         self.canvas.fill((224,225,209))
         self.canvas.blit(self.world.room_image(b,self.room_rect.size),self.room_rect)
         panel(self.canvas,(20,75,285,435),alpha=247)
-        self.fonts.draw(self.canvas,self.t(b['label']),(40,100),24,GREEN,True)
+        heading=self.fonts.wrapped(self.t(b['label']),23,245)
+        for i,line in enumerate(heading): self.fonts.draw(self.canvas,line,(40,100+i*29),23,GREEN,True)
         description=self.t('v5.dorm.'+b['id']) if b['id'] in DORMS else self.t('v5.indoor_text')
-        for i,line in enumerate(self.fonts.wrapped(description,18,245)[:8]): self.fonts.draw(self.canvas,line,(40,158+i*29),18,MUTED)
+        for i,line in enumerate(self.fonts.wrapped(description,18,245)[:7]): self.fonts.draw(self.canvas,line,(40,129+len(heading)*29+i*29),18,MUTED)
         self.fonts.draw(self.canvas,self.t('v5.room_controls'),(40,400),17,GREEN)
         self._button((40,445,245,43),self.t('v5.leave'),'leave',mouse)
         # Side panel indicates nearby activities, not collectible items.

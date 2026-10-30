@@ -8,7 +8,7 @@ FPS = 60
 
 TILE = 32
 MAP_COLS = 160
-MAP_ROWS = 112
+MAP_ROWS = 224
 WORLD_WIDTH = MAP_COLS * TILE
 WORLD_HEIGHT = MAP_ROWS * TILE
 
@@ -40,5 +40,6 @@ COLORS = {
 
 FONT_CANDIDATES = ["Microsoft JhengHei", "Noto Sans CJK TC", "Arial Unicode MS", "Arial"]
 
-SAVE_VERSION = 2
+SAVE_VERSION = 4
+LAYOUT_REVISION = "official-roads-2026-v7"
 APP_FOLDER = "NTHUPixelAdventure"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import re
 import pygame
 
 INK=(42,57,51)
@@ -23,10 +24,16 @@ class FontBook:
         lines=[]
         for paragraph in str(text).splitlines() or ['']:
             line=''
-            for char in paragraph:
-                if line and self.get(size).size(line+char)[0]>width: lines.append(line); line=char
-                else: line+=char
-            lines.append(line)
+            # Keep English words together; CJK remains individually wrappable.
+            for token in re.findall(r"[A-Za-z0-9]+(?:['’/-][A-Za-z0-9]+)*|[^\S\r\n]+|.",paragraph):
+                if line and self.get(size).size(line+token)[0]>width:
+                    lines.append(line.rstrip()); line=''; token=token.lstrip()
+                if not line and not token.strip(): continue
+                for char in token:
+                    if line and self.get(size).size(line+char)[0]>width:
+                        lines.append(line); line=char
+                    else: line+=char
+            lines.append(line.rstrip())
         return lines
 
 def panel(target,rect,fill=PAPER,alpha=245):
@@ -50,4 +57,6 @@ class Button:
         if self.primary and hovered: fill=(80,113,97)
         pygame.draw.rect(target,fill,self.rect,border_radius=9)
         pygame.draw.rect(target,LINE,self.rect,1,border_radius=9)
-        fonts.draw(target,self.label,self.rect.center,19,color,self.primary,'center')
+        size=19
+        while size>12 and fonts.get(size,self.primary).size(self.label)[0]>self.rect.width-18: size-=1
+        fonts.draw(target,self.label,self.rect.center,size,color,self.primary,'center')

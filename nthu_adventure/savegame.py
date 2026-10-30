@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -28,7 +29,15 @@ class SaveManager:
         payload = state.to_dict()
         payload["saved_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
         temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        temporary.replace(target)
+        # Windows antivirus/indexing can briefly hold the destination open.
+        # Keep the previous JSON intact if the atomic replacement still fails.
+        for attempt in range(4):
+            try:
+                temporary.replace(target)
+                break
+            except PermissionError:
+                if attempt==3: raise
+                time.sleep(.025*(attempt+1))
         return target
 
     def load(self, slot: int | str = "auto") -> GameState | None:

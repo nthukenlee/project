@@ -1,0 +1,486 @@
+{
+  "education": {
+    "marker_id": "28",
+    "source": "https://attractions.site.nthu.edu.tw/p/406-1515-186971,r8697.php?Lang=zh-tw",
+    "photo": "https://attractions.site.nthu.edu.tw/var/file/515/1515/pictures/860/m/mczh-tw700x700_large38350_33307160329.jpg",
+    "reference_lat": 24.795557,
+    "reference_lng": 120.993703,
+    "description_zh": "灰色混凝土連續廊柱、深屋簷與橫向窗帶；保留外掛冷氣與入口雨棚。",
+    "description_en": "Grey concrete piers, deep roof eaves and continuous window bands, with external AC units and an entrance canopy.",
+    "art": "campus-core-v7.png",
+    "crop": [
+      0.02,
+      0.045,
+      0.49,
+      0.43
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "general_4": {
+    "marker_id": "62",
+    "source": "https://attractions.site.nthu.edu.tw/p/406-1515-186944,r8697.php?Lang=zh-tw",
+    "photo": "https://attractions.site.nthu.edu.tw/var/file/515/1515/pictures/736/m/mczh-tw700x700_large38198_829920677205.jpg",
+    "reference_lat": 24.7957,
+    "reference_lng": 120.99652,
+    "description_zh": "兩層低樓、白灰色立柱、大面窗與平屋簷；入口為薄型平頂雨棚，舊稱研發大樓。",
+    "description_en": "A low two-storey block with pale piers, broad windows, flat eaves and a thin entrance canopy; formerly the R&D Building.",
+    "art": "campus-core-v7.png",
+    "crop": [
+      0.51,
+      0.14,
+      0.47,
+      0.34
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "main_library": {
+    "marker_id": "31",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/MXIC/mxic012.jpg",
+    "reference_lat": 24.79538,
+    "reference_lng": 120.99457,
+    "description_zh": "旺宏館以弧形前棟、挑高玻璃穿堂、白色遮陽構件和側面大階梯形成鮮明輪廓。",
+    "description_en": "Macronix combines a curved front wing, tall glazed atrium, white sunshades and a broad external stair.",
+    "art": "campus-core-v7.png",
+    "crop": [
+      0.01,
+      0.485,
+      0.54,
+      0.48
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "admin_hall": {
+    "marker_id": "33",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring10.jpg",
+    "reference_lat": 24.79466,
+    "reference_lng": 120.994548,
+    "description_zh": "三層白色水平量體，連續深色窗帶與中央入口；前方與大草坪、三角鐘路口相連。",
+    "description_en": "A low white three-storey facade with dark horizontal ribbon windows and a central entrance near the Campus Green.",
+    "art": "campus-core-v7.png",
+    "crop": [
+      0.545,
+      0.62,
+      0.435,
+      0.34
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "engineering_1": {
+    "marker_id": "118",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring02.jpg",
+    "reference_lat": 24.79519,
+    "reference_lng": 120.99604,
+    "description_zh": "淺色長立面、密集水平窗列與中央直向構件；地面層有寬入口柱廊。",
+    "description_en": "A broad pale facade with dense horizontal window bands, a vertical central division and a wide entrance portico.",
+    "art": "campus-science-v7.png",
+    "crop": [
+      0.015,
+      0.02,
+      0.475,
+      0.47
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "chemistry": {
+    "marker_id": "16",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring03.jpg",
+    "reference_lat": 24.7962,
+    "reference_lng": 120.99599,
+    "description_zh": "粉褐色高低錯落量體、綠色玻璃翼與淺色入口門框，窗列與屋頂輪廓和工一不同。",
+    "description_en": "Dusty pink stepped masses, a green-glass wing and a pale entrance portal give Chemistry a distinct silhouette.",
+    "art": "campus-science-v7.png",
+    "crop": [
+      0.5,
+      0.07,
+      0.48,
+      0.43
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "chemical_engineering": {
+    "marker_id": "18",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring04.jpg",
+    "reference_lat": 24.79629,
+    "reference_lng": 120.99507,
+    "description_zh": "褐粉色面磚、規整方窗與中央山牆，低斜入口雨棚是化工館的辨識特徵。",
+    "description_en": "Muted rose brick, regular square windows and a raised central parapet, with a low sloping entrance canopy.",
+    "art": "campus-science-v7.png",
+    "crop": [
+      0.055,
+      0.49,
+      0.375,
+      0.48
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "clinic": {
+    "marker_id": "32",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring06.jpg",
+    "reference_lat": 24.79625,
+    "reference_lng": 120.99431,
+    "description_zh": "紅褐面磚與淺色直柱交錯，方格窗、細框玻璃雨棚和低樓層比例保留醫輔大樓特徵。",
+    "description_en": "Peach brick alternates with pale vertical piers, grouped square windows and a slim glazed entrance canopy.",
+    "art": "campus-science-v7.png",
+    "crop": [
+      0.48,
+      0.65,
+      0.5,
+      0.32
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "general_2": {
+    "marker_id": "34",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/T203/spring11n.jpg",
+    "reference_lat": 24.79438,
+    "reference_lng": 120.99325,
+    "description_zh": "白色高樓以水平窗帶、外側直柱和挑高深色玻璃入口為主要特徵，並非低矮教室樓。",
+    "description_en": "A tall pale block with ribbon windows, vertical outer piers and a very tall dark-glass entrance atrium.",
+    "art": "campus-academic-v7.png",
+    "crop": [
+      0.02,
+      0.01,
+      0.48,
+      0.59
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "general_3": {
+    "marker_id": "17",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring12.jpg",
+    "reference_lat": 24.79507,
+    "reference_lng": 120.99358,
+    "description_zh": "淺色矩形框架包圍凹入的深色橫向窗帶，兩側可見窄窗列與中央入口。",
+    "description_en": "A pale rectangular outer frame surrounds recessed dark window bands, with narrow side windows and a central entrance.",
+    "art": "campus-academic-v7.png",
+    "crop": [
+      0.52,
+      0.13,
+      0.46,
+      0.47
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "old_incubator": {
+    "marker_id": "63",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring59.jpg",
+    "reference_lat": 24.79534,
+    "reference_lng": 120.99649,
+    "description_zh": "舊育成中心為兩層粉色面磚低樓，方窗與細柱平頂雨棚呼應照片中的入口。",
+    "description_en": "The old incubator is a low two-storey pink-tiled building with barred rectangular windows and a flat canopy on slender posts.",
+    "art": "campus-academic-v7.png",
+    "crop": [
+      0.02,
+      0.7,
+      0.53,
+      0.275
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "mechanical_chemistry": {
+    "marker_id": "29",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring05.jpg",
+    "reference_lat": 24.796533,
+    "reference_lng": 120.995204,
+    "description_zh": "保留舊實驗館的淡褐粉色外牆、階梯式山牆、三列大窗與低樓層輪廓。",
+    "description_en": "An older low lab block with muted mauve walls, stepped parapets and three rows of large simple windows.",
+    "art": "campus-academic-v7.png",
+    "crop": [
+      0.58,
+      0.6,
+      0.4,
+      0.38
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "materials_tech": {
+    "marker_id": "19",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring16.jpg",
+    "reference_lat": 24.79641,
+    "reference_lng": 120.99171,
+    "description_zh": "淡粉色外牆、深矩形窗洞和粗直柱形成凹凸立面，保持分翼及平屋頂輪廓。",
+    "description_en": "A pale pink facade with deep recessed rectangular windows, heavy piers, stepped wings and flat roof lines.",
+    "art": "campus-materials-v7.png",
+    "crop": [
+      0.02,
+      0.07,
+      0.51,
+      0.37
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "materials_lab": {
+    "marker_id": "20",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring49.jpg",
+    "reference_lat": 24.7967,
+    "reference_lng": 120.99074,
+    "description_zh": "材料實驗館採低層灰白混凝土量體、淺屋簷與凹入入口，和高樓型館舍區分。",
+    "description_en": "A low grey-white laboratory with shallow eaves, repetitive windows and a recessed entrance.",
+    "art": "campus-materials-v7.png",
+    "crop": [
+      0.54,
+      0.18,
+      0.44,
+      0.25
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "alloy_lab": {
+    "marker_id": "65",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring50.jpg",
+    "reference_lat": 24.79682,
+    "reference_lng": 120.99006,
+    "description_zh": "低層米白色實驗館，入口有寬大的平頂柱廊與方形立柱，後方保留低斜屋頂輪廓。",
+    "description_en": "A low cream laboratory with a broad flat entrance portico, square columns and a shallow pitched inner roof.",
+    "art": "campus-materials-v7.png",
+    "crop": [
+      0.02,
+      0.64,
+      0.515,
+      0.28
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "delta_hall": {
+    "marker_id": "30",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/delta/delta001.jpg",
+    "reference_lat": 24.79591,
+    "reference_lng": 120.99211,
+    "description_zh": "白色高樓、深色水平凹陽台、下部大片玻璃與粉褐色入口框是台達館的識別特徵。",
+    "description_en": "A tall white block with recessed dark balcony bands, large lower glass bays and a muted rose entrance surround.",
+    "art": "campus-materials-v7.png",
+    "crop": [
+      0.55,
+      0.44,
+      0.43,
+      0.53
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "physics": {
+    "marker_id": "117",
+    "source": "https://www.cylee.com/project/Department-of-Physics-nthu?lang=tw",
+    "photo": "https://www.cylee.com/uploads/default/NS_project_relates/raw/7bcfae8446fed6509417efc767abfb7c.jpg",
+    "reference_lat": 24.79434,
+    "reference_lng": 120.9924,
+    "description_zh": "淺石色外牆、拱頂窗框、開放式屋頂柱架與錯落樓翼。",
+    "description_en": "Pale stone walls, arched window surrounds, open rooftop pavilions and stepped wings.",
+    "art": "campus-life-v7.png",
+    "crop": [
+      0.015,
+      0.03,
+      0.53,
+      0.55
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "student_center": {
+    "marker_id": "4",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring34.jpg",
+    "reference_lat": 24.7925,
+    "reference_lng": 120.99394,
+    "description_zh": "水木生活中心的白色面磚、圓弧樓梯量體、深窗帶與薄型入口雨棚。",
+    "description_en": "Shui Mu has pale tile walls, a curved stair volume, deep window bands and a thin entrance canopy.",
+    "art": "campus-life-v7.png",
+    "crop": [
+      0.56,
+      0.19,
+      0.42,
+      0.4
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "dining_hall": {
+    "marker_id": "5",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring31.jpg",
+    "reference_lat": 24.79322,
+    "reference_lng": 120.99294,
+    "description_zh": "小吃部為低矮長形量體，寬出簷、入口格柵與連續窗列形成主要特徵。",
+    "description_en": "The food court is a long low block with wide eaves, entrance fins and continuous window bands.",
+    "art": "campus-life-v7.png",
+    "crop": [
+      0.015,
+      0.68,
+      0.49,
+      0.28
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "gym": {
+    "marker_id": "75",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring24.jpg",
+    "reference_lat": 24.79361,
+    "reference_lng": 120.99148,
+    "description_zh": "體育館保留三組高大玻璃窗、深凹窗框與低矮入口雨棚。",
+    "description_en": "Three tall glazed bays, recessed surrounds and a low entrance canopy identify the gym.",
+    "art": "campus-life-v7.png",
+    "crop": [
+      0.53,
+      0.59,
+      0.45,
+      0.38
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "humanities_building": {
+    "marker_id": "23",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring47.jpg",
+    "reference_lat": 24.78987,
+    "reference_lng": 120.9897,
+    "description_zh": "人社院以紅褐面磚、灰色基座與細長鐘塔構成鮮明輪廓。",
+    "description_en": "Humanities combines red-brown brick, a grey base and a slender clock tower.",
+    "art": "campus-culture-v7.png",
+    "crop": [
+      0.01,
+      0.005,
+      0.49,
+      0.505
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "auditorium": {
+    "marker_id": "36",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring30.jpg",
+    "reference_lat": 24.79357,
+    "reference_lng": 120.99388,
+    "description_zh": "大禮堂為層疊白色量體，前方柱廊、水平玻璃窗與寬階梯保留入口特徵。",
+    "description_en": "The auditorium has layered white masses, a front colonnade, horizontal glazing and broad entrance steps.",
+    "art": "campus-culture-v7.png",
+    "crop": [
+      0.5,
+      0.2,
+      0.49,
+      0.31
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "museum": {
+    "marker_id": "126",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/nuclear/leetm.jpg",
+    "reference_lat": 24.790759,
+    "reference_lng": 120.99136,
+    "description_zh": "李存敏館保留層疊露台、淺色網格面與橙色入口框。",
+    "description_en": "Lee Tsen Min features stepped terraces, pale mesh-like walls and a distinctive orange entrance surround.",
+    "art": "campus-culture-v7.png",
+    "crop": [
+      0.02,
+      0.515,
+      0.535,
+      0.46
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "computer_science": {
+    "marker_id": "26",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring18.jpg",
+    "reference_lat": 24.79508,
+    "reference_lng": 120.99213,
+    "description_zh": "劉炯朗館以對稱淺色翼樓、規整方窗與入口上方菱形構件區分。",
+    "description_en": "Liu Jiong Lang has symmetrical pale wings, regular square windows and a diamond detail above the entrance.",
+    "art": "campus-culture-v7.png",
+    "crop": [
+      0.56,
+      0.52,
+      0.42,
+      0.46
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "natural_science": {
+    "marker_id": "24",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring45.jpg",
+    "reference_lat": 24.7899,
+    "reference_lng": 120.99026,
+    "description_zh": "生命科學一館為白色水平窗帶、階梯量體與中央平頂雨棚。",
+    "description_en": "Life Science I has pale horizontal window bands, stepped masses and a central flat entrance canopy.",
+    "art": "campus-research-v7.png",
+    "crop": [
+      0.005,
+      0.12,
+      0.53,
+      0.365
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "biomedical": {
+    "marker_id": "22",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring43.jpg",
+    "reference_lat": 24.78928,
+    "reference_lng": 120.9914,
+    "description_zh": "生醫館保留高低雙翼、深色玻璃連接部與直立鐘塔量體。",
+    "description_en": "Biomedical retains tall adjoining wings, a dark glazed connection and a vertical clock-tower volume.",
+    "art": "campus-research-v7.png",
+    "crop": [
+      0.53,
+      0.01,
+      0.46,
+      0.51
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "faculty_housing": {
+    "marker_id": "6",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring65.jpg",
+    "reference_lat": 24.797912,
+    "reference_lng": 120.990932,
+    "description_zh": "清華會館保留中央玻璃軸線、兩側突出窗間與入口柱廊。",
+    "description_en": "Guest House I retains a central glazed axis, projecting side window bays and an entrance portico.",
+    "art": "campus-research-v7.png",
+    "crop": [
+      0.05,
+      0.505,
+      0.39,
+      0.48
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "engineering_2": {
+    "marker_id": "64",
+    "source": "https://campusmap.cc.nthu.edu.tw/",
+    "photo": "https://campusmap.cc.nthu.edu.tw/tour/spring13.jpg",
+    "reference_lat": 24.79634,
+    "reference_lng": 120.99256,
+    "description_zh": "工程三館的水平窗帶、外側立柱與寬平頂入口柱廊。",
+    "description_en": "Engineering III has horizontal window bands, outer piers and a broad flat entrance portico.",
+    "art": "campus-research-v7.png",
+    "crop": [
+      0.45,
+      0.62,
+      0.54,
+      0.36
+    ],
+    "coverage": "photo_reference_redraw"
+  },
+  "south_lab": {
+    "source": "https://www.nthu.edu.tw/hotNews/content/636",
+    "photo": "https://www.nthu.edu.tw/images/hotNews_152602949846.jpg",
+    "renderer": "tsinghua_lab",
+    "coverage": "photo_reference_redraw",
+    "description_zh": "清華實驗室以橫向百葉左翼、中央藍色玻璃量體、粉灰色條帶側翼與外挑連通雨棚重繪。",
+    "description_en": "Tsing Hua Laboratory is redrawn with a louvred left wing, central blue glazing, pink-grey striped wing and projecting connecting canopy."
+  }
+}

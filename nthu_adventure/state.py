@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from .constants import SAVE_VERSION, WORLD_WIDTH, WORLD_HEIGHT
+from .constants import SAVE_VERSION, WORLD_WIDTH, WORLD_HEIGHT, LAYOUT_REVISION
 from .content import QUESTS, ZONES, SPAWN_TILE, tile_center
 
 def default_quest_states():
@@ -35,6 +35,7 @@ class GameState:
     def to_dict(self):
         return {
             "version":SAVE_VERSION,
+            "map_revision":LAYOUT_REVISION,
             "player":{"x":self.player_x,"y":self.player_y,"facing":self.facing},
             "settings":{"language":self.language,"fullscreen":self.fullscreen},
             "profile":{"name":self.player_name,"appearance":self.appearance},
@@ -90,6 +91,11 @@ def migrate_save(data):
     for key in ("collected","hidden_items","resources","gathered_nodes","crafted","decorations","area","courtyard_pos","courtyard_flags"):
         migrated.pop(key,None)
     if version < 2: migrated["inventory_selected"] = 0
+    if version < 4:
+        # v6/v7 relocate campus footprints. Old absolute coordinates must not put
+        # returning players inside the new lake or on an unrelated field.
+        migrated["player"]={**migrated.get("player",{}),"x":tile_center(SPAWN_TILE)[0],"y":tile_center(SPAWN_TILE)[1]}
+    migrated["map_revision"] = LAYOUT_REVISION
     migrated["version"] = SAVE_VERSION
     return migrated
 
