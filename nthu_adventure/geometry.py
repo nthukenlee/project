@@ -22,12 +22,15 @@ def smooth_polygon(points, samples=6):
     return result
 
 
-def stroke(surface, color, points, width):
+def stroke(surface, color, points, width, end_caps=True):
     width = max(1,round(width))
     vertices = [(round(x),round(y)) for x,y in points]
     if len(vertices)<2: return
     pygame.draw.lines(surface, color, False, vertices, width)
-    for point in vertices: pygame.draw.circle(surface, color, point, max(1,width//2))
+    for i, point in enumerate(vertices):
+        if not end_caps and (i == 0 or i == len(vertices) - 1):
+            continue
+        pygame.draw.circle(surface, color, point, max(1,width//2))
 
 
 def distance_to_path(position, points):

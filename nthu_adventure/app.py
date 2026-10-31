@@ -32,6 +32,7 @@ class Game:
         self.room_rect=pygame.Rect(330,74,620,620)
         self.custom_name=''; self.custom_appearance=dict(self.state.appearance)
         self.selected_dorm='education';self.architecture_page=0;self.map_list_page=0
+        self.debug_mode=False
         self.map_zoom=1.0; self.map_center=pygame.Vector2(WORLD_WIDTH/2,WORLD_HEIGHT/2)
         self.map_drag=None; self.map_cache_key=None
 
@@ -109,6 +110,7 @@ class Game:
             self.custom_name=(self.custom_name+''.join(c for c in event.text if c.isprintable()))[:12]
         if event.type==pygame.KEYDOWN:
             key=event.key
+            if key==pygame.K_F3: self.debug_mode=not self.debug_mode; return
             if key==pygame.K_F11: self._set_fullscreen(not self.fullscreen); return
             if self.scene=='customize':
                 if key==pygame.K_BACKSPACE: self.custom_name=self.custom_name[:-1]
@@ -387,6 +389,24 @@ class Game:
             x,y=self.state.player_x-camera.x,self.state.player_y-camera.y
             for dx in (-15,15): pygame.draw.circle(self.canvas,(64,78,71),(round(x+dx),round(y-4)),11,2)
             pygame.draw.aalines(self.canvas,GREEN,False,[(x-15,y-4),(x,y-20),(x+15,y-4),(x-3,y-4),(x-15,y-4)])
+        if self.debug_mode:
+            start_x=(camera.x//TILE)*TILE
+            start_y=(camera.y//TILE)*TILE
+            for x in range(start_x,camera.x+1280,TILE):
+                tx=x//TILE
+                pygame.draw.line(self.canvas,(180,180,180),(x-camera.x,0),(x-camera.x,720),1)
+                if tx%5==0: self.fonts.draw(self.canvas,str(tx),(x-camera.x+2,2),12,(180,50,50))
+            for y in range(start_y,camera.y+720,TILE):
+                ty=y//TILE
+                pygame.draw.line(self.canvas,(180,180,180),(0,y-camera.y),(1280,y-camera.y),1)
+                if ty%5==0: self.fonts.draw(self.canvas,str(ty),(2,y-camera.y+2),12,(180,50,50))
+            mx,my=self.world.camera_for(self.state.player_x,self.state.player_y).topleft
+            mx+=mouse[0]; my+=mouse[1]
+            itx,ity=mx//TILE,my//TILE
+            label=f'Tile: [{itx}, {ity}] ({mx}, {my})'
+            tw=self.fonts.get(14).size(label)[0]+10
+            panel(self.canvas,(mouse[0]+15,mouse[1]-25,tw,22),alpha=200)
+            self.fonts.draw(self.canvas,label,(mouse[0]+20,mouse[1]-21),14,INK)
         hour=self.state.time_minutes/60
         if hour>=19:
             dusk=pygame.Surface(WINDOW_SIZE,pygame.SRCALPHA); dusk.fill((26,47,63,50)); self.canvas.blit(dusk,(0,0))

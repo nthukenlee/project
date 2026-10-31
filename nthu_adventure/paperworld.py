@@ -140,16 +140,22 @@ class PaperWorld:
             for x in range(0,WORLD_WIDTH,256):
                 self.ground.blit(pygame.transform.rotate(self.materials[0],rng.choice((0,90,180,270))),(x,y))
         self._landscapes(rng)
+        
+        # Draw all roads (fill only)
         for spec,points in self.paths:
-            if spec in ROADS: self._paint_path(points,spec['width']*TILE,rng)
+            if spec in ROADS: self._paint_path(points,spec['width']*TILE,rng,mode='fill')
+            
         for _,points in self.water_shapes:
             self._paint_water(points,rng)
         for _,points in self.island_shapes:
             pygame.draw.polygon(self.ground,(164,166,129),points)
             pygame.draw.lines(self.ground,(124,145,120),True,points,5)
+            
+        # Draw all walkways (fill only)
         for spec,points in self.paths:
             if spec in WALKWAYS:
-                self._paint_path(points,spec['width']*TILE,rng,spec.get('bridge',False))
+                self._paint_path(points,spec['width']*TILE,rng,spec.get('bridge',False),mode='fill')
+                
         for island in ISLANDS:
             if island.get('pavilion'): self._pavilion(pixel_points([island['center']])[0],21)
         for feature in LAKE_FEATURES: self._lake_feature(feature,rng)
@@ -226,34 +232,34 @@ class PaperWorld:
         pygame.draw.ellipse(self.ground,(193,191,167),(fx-26,fy-9,52,22))
         pygame.draw.line(self.ground,(117,125,113),(fx,fy),(fx,fy-97),3)
         pygame.draw.polygon(self.ground,(126,97,109),[(fx+2,fy-97),(fx+35,fy-93),(fx+28,fy-76),(fx+2,fy-80)])
-        cx,cy=120*TILE,67*TILE
+        cx,cy=107*TILE,71*TILE
         pygame.draw.polygon(self.ground,(145,153,131),[(cx-18,cy+7),(cx+18,cy+7),(cx+7,cy-39),(cx-7,cy-39)])
         pygame.draw.circle(self.ground,(224,221,197),(cx,cy-39),15)
         pygame.draw.circle(self.ground,(104,119,103),(cx,cy-39),15,2)
         pygame.draw.line(self.ground,(72,91,76),(cx,cy-39),(cx,cy-48),2)
         pygame.draw.line(self.ground,(72,91,76),(cx,cy-39),(cx+7,cy-36),2)
 
-    def _paint_path(self,points,width,rng,wood=False):
-        edge=(126,127,108) if wood else (145,155,127)
+    def _paint_path(self,points,width,rng,wood=False,mode='both'):
         color=(169,143,110) if wood else (207,200,178)
-        stroke(self.ground,edge,points,width+8)
-        stroke(self.ground,color,points,width)
-        for a,b in zip(points,points[1:]):
-            segment=b-a
-            if not segment.length_squared(): continue
-            tangent=segment.normalize(); normal=pygame.Vector2(-tangent.y,tangent.x)
-            for step in range(0,round(segment.length()),10 if wood else 22):
-                center=a+tangent*step
-                extent=width*.45 if wood else rng.uniform(.15,.42)*width
-                shade=(130,112,89) if wood else (191+rng.randrange(10),188,168)
-                pygame.draw.aaline(self.ground,shade,center-normal*extent,center+normal*extent)
-            if wood:
-                for side in (-1,1):
-                    rail_a,rail_b=a+normal*(width/2+2)*side,b+normal*(width/2+2)*side
-                    pygame.draw.line(self.ground,(102,111,94),rail_a,rail_b,3)
-                    for step in range(0,round(segment.length()),36):
-                        point=rail_a+tangent*step
-                        pygame.draw.line(self.ground,(93,104,88),point,point+(0,-9),3)
+        # Borderless rendering: Ignore edge mode, only draw fill.
+        if mode in ('fill', 'both'):
+            stroke(self.ground,color,points,width,end_caps=True)
+            for a,b in zip(points,points[1:]):
+                segment=b-a
+                if not segment.length_squared(): continue
+                tangent=segment.normalize(); normal=pygame.Vector2(-tangent.y,tangent.x)
+                for step in range(0,round(segment.length()),10 if wood else 22):
+                    center=a+tangent*step
+                    extent=width*.45 if wood else rng.uniform(.15,.42)*width
+                    shade=(130,112,89) if wood else (191+rng.randrange(10),188,168)
+                    pygame.draw.aaline(self.ground,shade,center-normal*extent,center+normal*extent)
+                if wood:
+                    for side in (-1,1):
+                        rail_a,rail_b=a+normal*(width/2+2)*side,b+normal*(width/2+2)*side
+                        pygame.draw.line(self.ground,(102,111,94),rail_a,rail_b,3)
+                        for step in range(0,round(segment.length()),36):
+                            point=rail_a+tangent*step
+                            pygame.draw.line(self.ground,(93,104,88),point,point+(0,-9),3)
 
     def _paint_water(self,points,rng):
         rect=pygame.Rect(min(x for x,y in points),min(y for x,y in points),1,1)
