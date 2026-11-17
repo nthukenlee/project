@@ -116,9 +116,7 @@
       "label": "road.ziqiang",
       "width": 2.3,
       "points": [
-        [103, 43],
-        [99, 47],
-        [86, 47],
+        [80, 46],
         [71, 47],
         [63, 52],
         [62, 63],
@@ -161,7 +159,7 @@
       "width": 1.8,
       "points": [
         [85, 98],
-        [85, 105],
+        [85, 108],
         [95, 108],
         [97, 119],
         [110, 119],
@@ -184,10 +182,10 @@
         [136, 107],
         [124, 107],
         [111, 108],
-        [99, 108],
-        [97, 106],
-        [95, 104],
-        [95, 97],
+        [100, 108],
+        [98, 106],
+        [96, 104],
+        [96, 99],
         [85, 98]
       ]
     },
@@ -421,6 +419,7 @@
       "id": "lake_loop",
       "label": "lake.loop",
       "width": 1,
+      "closed": true,
       "points": [
         [100, 76],
         [105, 74.72],
@@ -449,8 +448,7 @@
         [98, 88.75],
         [95, 87.05],
         [94, 83.65],
-        [96, 79.4],
-        [100, 76]
+        [96, 79.4]
       ]
     },
     {
@@ -487,16 +485,6 @@
       "bridge": true
     },
     {
-      "id": "lake_west_entry",
-      "label": "lake.west_entry",
-      "width": 1.5,
-      "points": [
-        [94, 80],
-        [95, 84],
-        [94, 85]
-      ]
-    },
-    {
       "id": "campus_green_loop",
       "label": "path.campus_green_loop",
       "width": 1.1,
@@ -518,22 +506,22 @@
       ]
     },
     {
-      "id": "grass_clock_link",
-      "label": "path.grass_clock_link",
-      "width": 1,
-      "points": [
-        [120, 65],
-        [120, 67],
-        [119, 68]
-      ]
-    },
-    {
       "id": "general2_east_walk",
       "label": "path.general2_east_walk",
       "width": 1,
       "points": [
         [78, 57],
         [78, 96]
+      ]
+    },
+    {
+      "id": "clinic_to_edu",
+      "label": "path.clinic_to_edu",
+      "width": 1,
+      "points": [
+        [105.5, 44],
+        [98, 47],
+        [89, 53]
       ]
     }
   ],
@@ -573,8 +561,7 @@
       "rect": [94, 66, 10, 7],
       "label": "landmark.admin_hall",
       "color": "brick",
-      "style": "admin",
-      "access": [[88.5, 76]]
+      "style": "admin"
     },
     {
       "id": "main_library",
@@ -597,14 +584,10 @@
     },
     {
       "id": "physics",
-      "rect": [68, 64, 9, 6],
+      "rect": [68, 72, 9, 6],
       "label": "landmark.physics",
       "color": "purple",
-      "style": "science",
-      "access": [
-        [72.5, 72],
-        [72.5, 79]
-      ]
+      "style": "science"
     },
     {
       "id": "engineering_1",
@@ -622,11 +605,7 @@
       "rect": [82, 36, 10, 6],
       "label": "landmark.engineering_2",
       "color": "brick",
-      "style": "engineering",
-      "access": [
-        [87, 45],
-        [87, 47]
-      ]
+      "style": "engineering"
     },
     {
       "id": "student_center",
@@ -672,15 +651,10 @@
     },
     {
       "id": "education",
-      "rect": [92, 48, 10, 4],
+      "rect": [94, 51, 10, 4],
       "label": "landmark.education",
       "color": "purple",
-      "style": "education",
-      "access": [
-        [96, 53.4],
-        [95.5, 55],
-        [94, 58]
-      ]
+      "style": "education"
     },
     {
       "id": "ren_hall",
@@ -767,23 +741,17 @@
     },
     {
       "id": "computer_science",
-      "rect": [70, 50, 8, 5],
+      "rect": [68, 61, 8, 5],
       "label": "landmark.computer_science",
       "color": "brick",
-      "style": "engineering",
-      "access": [
-        [74, 56],
-        [65, 56],
-        [62, 59]
-      ]
+      "style": "engineering"
     },
     {
       "id": "delta_hall",
-      "rect": [68, 39, 10, 7],
+      "rect": [66, 52, 10, 7],
       "label": "landmark.delta_hall",
       "color": "purple",
-      "style": "modern",
-      "access": [[73, 47]]
+      "style": "modern"
     },
     {
       "id": "natural_science",
@@ -861,8 +829,7 @@
       "rect": [87, 61, 7, 5],
       "label": "landmark.general_3",
       "color": "purple",
-      "style": "general_tower",
-      "access": [[90.5, 70]]
+      "style": "general_tower"
     },
     {
       "id": "old_incubator",
@@ -873,7 +840,7 @@
       "access": [
         [146, 61],
         [145, 68],
-        [134.5, 68]
+        [134.5, 68.6]
       ]
     },
     {

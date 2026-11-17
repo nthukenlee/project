@@ -7,18 +7,32 @@ from pathlib import Path
 os.environ.setdefault('SDL_VIDEODRIVER','dummy')
 os.environ.setdefault('SDL_AUDIODRIVER','dummy')
 
+import pygame
 from nthu_adventure import content
 from nthu_adventure.content import BUILDINGS,NPCS,QUESTS,DORMS,SPAWN_TILE,tile_center,validate_content
 from nthu_adventure.constants import SAVE_VERSION,TILE,MAP_COLS,MAP_ROWS
 from nthu_adventure.state import GameState,QuestSystem,migrate_save
 from nthu_adventure.savegame import SaveManager
 from nthu_adventure.localization import Localizer
-from nthu_adventure.geometry import pixel_points
+from nthu_adventure.geometry import pixel_points, smooth_path
 
 TEMP_ROOT=Path(__file__).resolve().parents[1]/'work'/'test-temp'
 TEMP_ROOT.mkdir(parents=True,exist_ok=True)
 
 class ContentTests(unittest.TestCase):
+    def test_roads_are_sampled_as_bounded_smooth_paths(self):
+        points = [(0, 0), (10, 10), (20, 0)]
+        smooth = smooth_path(points, spacing=2)
+
+        self.assertEqual(smooth[0], pygame.Vector2(points[0]))
+        self.assertEqual(smooth[-1], pygame.Vector2(points[-1]))
+        self.assertNotEqual(smooth[4], pygame.Vector2((5, 5)))
+        for point in smooth:
+            self.assertGreaterEqual(point.x, 0)
+            self.assertLessEqual(point.x, 20)
+            self.assertGreaterEqual(point.y, 0)
+            self.assertLessEqual(point.y, 10)
+
     def test_data_and_removed_pickups(self):
         self.assertEqual(validate_content(),[])
         self.assertEqual(len(BUILDINGS),34)

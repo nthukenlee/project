@@ -5,7 +5,7 @@ import random
 import pygame
 from .constants import ROOT, TILE, WORLD_WIDTH, WORLD_HEIGHT, INTERNAL_WIDTH, INTERNAL_HEIGHT
 from .content import BUILDINGS, DORMS, ARCHITECTURE, LANDSCAPES, SCENERY_POINTS, ROADS, WATERS, ISLANDS, WALKWAYS, LAKE_FEATURES, SPORTS_FIELDS, MAIN_GATE_TILE, NPCS, tile_center
-from .geometry import pixel_points, smooth_polygon, stroke, distance_to_path
+from .geometry import pixel_points, smooth_path, smooth_polygon, stroke, distance_to_path
 from .architecture import tsinghua_lab
 
 ASSETS = ROOT / "assets" / "painted"
@@ -85,7 +85,14 @@ class PaperWorld:
         for _,points in self.water_shapes: pygame.draw.polygon(water,(255,255,255),points)
         for _,points in self.island_shapes: pygame.draw.polygon(water,(0,0,0),points)
         for spec,points in self.paths:
-            if spec in WALKWAYS: stroke(water,(0,0,0),points,spec['width']*TILE)
+            if spec in WALKWAYS:
+                stroke(
+                    water,
+                    (0,0,0),
+                    smooth_path(points, closed=spec.get('closed',False)),
+                    spec['width']*TILE,
+                    closed=spec.get('closed',False),
+                )
         for feature in LAKE_FEATURES:
             if feature['kind']=='pier':
                 x,y=feature['tile']; pygame.draw.rect(water,(0,0,0),(x*TILE-22,y*TILE-16,65,32))
@@ -143,7 +150,7 @@ class PaperWorld:
         
         # Draw all roads (fill only)
         for spec,points in self.paths:
-            if spec in ROADS: self._paint_path(points,spec['width']*TILE,rng,mode='fill')
+            if spec in ROADS: self._paint_path(points,spec['width']*TILE,rng,mode='fill',closed=spec.get('closed',False))
             
         for _,points in self.water_shapes:
             self._paint_water(points,rng)
@@ -154,7 +161,7 @@ class PaperWorld:
         # Draw all walkways (fill only)
         for spec,points in self.paths:
             if spec in WALKWAYS:
-                self._paint_path(points,spec['width']*TILE,rng,spec.get('bridge',False),mode='fill')
+                self._paint_path(points,spec['width']*TILE,rng,spec.get('bridge',False),mode='fill',closed=spec.get('closed',False))
                 
         for island in ISLANDS:
             if island.get('pavilion'): self._pavilion(pixel_points([island['center']])[0],21)
@@ -239,11 +246,12 @@ class PaperWorld:
         pygame.draw.line(self.ground,(72,91,76),(cx,cy-39),(cx,cy-48),2)
         pygame.draw.line(self.ground,(72,91,76),(cx,cy-39),(cx+7,cy-36),2)
 
-    def _paint_path(self,points,width,rng,wood=False,mode='both'):
+    def _paint_path(self,points,width,rng,wood=False,mode='both',closed=False):
         color=(169,143,110) if wood else (207,200,178)
+        points=smooth_path(points,closed=closed)
         # Borderless rendering: Ignore edge mode, only draw fill.
         if mode in ('fill', 'both'):
-            stroke(self.ground,color,points,width,end_caps=True)
+            stroke(self.ground,color,points,width,end_caps=not closed,closed=closed)
             for a,b in zip(points,points[1:]):
                 segment=b-a
                 if not segment.length_squared(): continue
