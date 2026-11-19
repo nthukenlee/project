@@ -207,6 +207,7 @@ class Game:
             if not self.world.collides(self._player_rect(y=self.state.player_y+dy/steps)): self.state.player_y+=dy/steps
 
     def _update_explore(self,dt):
+        self.world.update_npcs(dt)
         self.state.play_seconds+=dt; self.state.time_minutes+=dt*1.5
         if self.state.time_minutes>=22*60:
             self.state.day+=1; self.state.time_minutes=7*60; self.state.energy=100
@@ -244,7 +245,7 @@ class Game:
 
     def _nearby(self):
         player=pygame.Vector2(self.state.player_x,self.state.player_y)
-        candidates=[(player.distance_to(tile_center(n['tile'])),'npc',n) for n in NPCS]
+        candidates=[(player.distance_to(self.world.npc_position(n['id'])),'npc',n) for n in NPCS]
         candidates += [(player.distance_to(self.world.door(b)),'building',b) for b in BUILDINGS]
         candidates += [(player.distance_to(tile_center(s['tile'])),'shop',s) for s in SHOPS]
         candidates += [(player.distance_to((p['tile'][0]*TILE,p['tile'][1]*TILE)),'landscape',p) for p in LAKE_POINTS+SCENERY_POINTS]

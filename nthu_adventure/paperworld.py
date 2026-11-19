@@ -93,6 +93,12 @@ class Characters:
 class PaperWorld:
     def __init__(self):
         self.characters=Characters()
+        self.npc_positions={npc["id"]:pygame.Vector2(tile_center(npc["tile"])) for npc in NPCS}
+        self.npc_targets={}
+        self.npc_facing={npc["id"]:"down" for npc in NPCS}
+        self.npc_moving=set()
+        self.npc_rng=random.Random(2741)
+        self.npc_wait={npc["id"]:self.npc_rng.uniform(.5,2.5) for npc in NPCS}
         self.collision_rects=[pygame.Rect(b["rect"].pixels()).inflate(4,4) for b in BUILDINGS]
         self.water_shapes=[(spec,smooth_polygon(spec['points'])) for spec in WATERS]
         self.island_shapes=[(spec,smooth_polygon(spec['points'])) for spec in ISLANDS]
@@ -161,6 +167,51 @@ class PaperWorld:
         self.ground=pygame.Surface((WORLD_WIDTH,WORLD_HEIGHT))
         self.trees=[]
         self._build()
+
+    def npc_position(self,npc_id):
+        return self.npc_positions[npc_id]
+
+    def update_npcs(self,dt):
+        for npc in NPCS:
+            npc_id=npc["id"]
+            position=self.npc_positions[npc_id]
+            target=self.npc_targets.get(npc_id)
+            if target is None:
+                self.npc_wait[npc_id]-=dt
+                if self.npc_wait[npc_id]>0: continue
+                for _ in range(12):
+                    candidate=position+pygame.Vector2(
+                        self.npc_rng.uniform(-220,220),
+                        self.npc_rng.uniform(-220,220),
+                    )
+                    if not self.collides(pygame.Rect(round(candidate.x-8),round(candidate.y-6),16,13)):
+                        target=candidate
+                        break
+                if target is None:
+                    self.npc_wait[npc_id]=1
+                    continue
+                self.npc_targets[npc_id]=target
+
+            direction=target-position
+            if direction.length_squared()<9:
+                del self.npc_targets[npc_id]
+                self.npc_wait[npc_id]=self.npc_rng.uniform(.5,2.5)
+                self.npc_moving.discard(npc_id)
+                continue
+            direction.scale_to_length(min(38*dt,direction.length()))
+            next_position=position+direction
+            rect=pygame.Rect(round(next_position.x-8),round(next_position.y-6),16,13)
+            if self.collides(rect):
+                del self.npc_targets[npc_id]
+                self.npc_wait[npc_id]=.4
+                self.npc_moving.discard(npc_id)
+                continue
+            self.npc_positions[npc_id]=next_position
+            self.npc_moving.add(npc_id)
+            if abs(direction.x)>abs(direction.y):
+                self.npc_facing[npc_id]="left" if direction.x<0 else "right"
+            else:
+                self.npc_facing[npc_id]="up" if direction.y<0 else "down"
 
     def _build(self):
         rng=random.Random(10426)
@@ -381,7 +432,7 @@ class PaperWorld:
         for x,y,image in self.trees:
             if camera.inflate(200,200).collidepoint(x,y): layers.append((y,"tree",(x,y,image)))
         for actor in actors:
-            x,y=tile_center(actor["tile"])
+            x,y=self.npc_position(actor["id"])
             if camera.inflate(100,100).collidepoint(x,y): layers.append((y,"npc",actor))
         layers.append((state.player_y,"player",None))
         for _,kind,value in sorted(layers,key=lambda v:v[0]):
@@ -391,13 +442,14 @@ class PaperWorld:
             else:
                 if kind=="player": x,y=state.player_x,state.player_y; appearance=state.appearance; facing=state.facing
                 else:
-                    x,y=tile_center(value["tile"]); n=sum(map(ord,value["id"]))
+                    x,y=self.npc_position(value["id"]); n=sum(map(ord,value["id"]))
                     appearance={"shirt":n%6,"hair_color":n%5,"skin":n%4,"hair_style":n%4}; facing="down"
+                    facing=self.npc_facing[value["id"]]
                 if kind=="player" and riding_bike:
                     bike_facing=facing if facing in ("left","right") else "right"
                     self.characters.draw_bike(target,(x-camera.x,y-camera.y),bike_facing,moving,tick)
                 else:
-                    self.characters.draw(target,(x-camera.x,y-camera.y),facing,moving if kind=="player" else False,appearance,tick)
+                    self.characters.draw(target,(x-camera.x,y-camera.y),facing,moving if kind=="player" else value["id"] in self.npc_moving,appearance,tick)
         # Sparse restrained ripple motion, not floating pickup sparkles.
         for spec,points in self.water_shapes:
             water=pygame.Rect(min(x for x,y in points),min(y for x,y in points),1,1)
