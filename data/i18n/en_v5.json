@@ -45,7 +45,7 @@
   "v5.thirst":"Water",
   "v5.energy":"Energy",
   "v5.weather":"Breeze · Partly cloudy",
-  "v5.controls":"WASD Move   E Interact   M Map   Q Journal   C Dorm Guide",
+  "v5.controls":"WASD Move   Shift Toggle Run   E Interact   M Map   Q Journal   C Dorm Guide",
   "v5.shop_hint":"E · Meals and drinking water",
   "v5.map_hint":"Select a building or destination",
   "v5.progress":"Journey {value}%",

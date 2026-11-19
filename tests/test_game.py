@@ -35,7 +35,7 @@ class ContentTests(unittest.TestCase):
 
     def test_data_and_removed_pickups(self):
         self.assertEqual(validate_content(),[])
-        self.assertEqual(len(BUILDINGS),34)
+        self.assertEqual(len(BUILDINGS),35)
         self.assertEqual(len(QUESTS),8)
         for removed in ('COLLECTIBLES','RESOURCE_NODES','HIDDEN_ITEMS','RECIPES'):
             self.assertFalse(hasattr(content,removed),removed)
@@ -262,6 +262,16 @@ class RuntimeTests(unittest.TestCase):
         g._update_explore(.01)
         self.assertFalse(hasattr(g.state,'collected'))
         self.assertNotIn('collected',g.state.to_dict())
+
+    def test_shift_toggles_running_instead_of_requiring_hold(self):
+        g=self.game
+        g.scene='explore'; g.running_fast=False
+        g._handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT, repeat=False), (0,0))
+        self.assertTrue(g.running_fast)
+        g._handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT, repeat=True), (0,0))
+        self.assertTrue(g.running_fast)
+        g._handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT, repeat=False), (0,0))
+        self.assertFalse(g.running_fast)
 
     def test_every_road_shore_walk_and_entrance_is_unblocked(self):
         g=self.game

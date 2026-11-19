@@ -760,6 +760,18 @@
       ]
     },
     {
+      "id": "life_science_2",
+      "rect": [42, 161, 10, 6],
+      "label": "landmark.life_science_2",
+      "color": "brick",
+      "style": "science",
+      "access": [
+        [47, 168],
+        [45, 169],
+        [32, 168]
+      ]
+    },
+    {
       "id": "biomedical",
       "rect": [63, 153, 9, 7],
       "label": "landmark.biomedical",
@@ -779,6 +791,18 @@
       "access": [
         [51.5, 198],
         [51, 200]
+      ]
+    },
+    {
+      "id": "tsmc_hall",
+      "rect": [24, 192, 12, 8],
+      "label": "landmark.tsmc_hall",
+      "color": "brick",
+      "style": "tsmc",
+      "access": [
+        [30, 202],
+        [37, 202],
+        [43, 196]
       ]
     },
     {

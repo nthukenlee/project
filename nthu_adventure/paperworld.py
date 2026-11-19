@@ -6,7 +6,7 @@ import pygame
 from .constants import ROOT, TILE, WORLD_WIDTH, WORLD_HEIGHT, INTERNAL_WIDTH, INTERNAL_HEIGHT
 from .content import BUILDINGS, DORMS, ARCHITECTURE, LANDSCAPES, SCENERY_POINTS, ROADS, WATERS, ISLANDS, WALKWAYS, LAKE_FEATURES, SPORTS_FIELDS, MAIN_GATE_TILE, NPCS, tile_center
 from .geometry import pixel_points, smooth_path, smooth_polygon, stroke, distance_to_path
-from .architecture import tsinghua_lab
+from .architecture import tsinghua_lab, life_science_2
 
 ASSETS = ROOT / "assets" / "painted"
 INK = (48, 58, 54)
@@ -34,6 +34,15 @@ class Characters:
                 cell=crop_cell(sheet,col,row,4,4)
                 h=64; w=max(18,round(cell.get_width()/cell.get_height()*h))
                 self.frames[row].append(pygame.transform.smoothscale(cell,(w,h)))
+        bike_sheet=load_image("cyclists_spaced(1).png")
+        frame_width=bike_sheet.get_width()//5
+        frame_height=bike_sheet.get_height()//2
+        self.bike_right=[]; self.bike_left=[]
+        for col in range(5):
+            for row,frames in ((0,self.bike_right),(1,self.bike_left)):
+                cell=bike_sheet.subsurface((col*frame_width,row*frame_height,frame_width,frame_height)).copy()
+                cell=cell.subsurface(cell.get_bounding_rect(min_alpha=80)).copy()
+                frames.append(pygame.transform.smoothscale(cell,(68,74)))
 
     def sprite(self,facing,frame,appearance):
         row={"down":0,"left":1,"right":2,"up":3}.get(facing,0)
@@ -70,6 +79,16 @@ class Characters:
         pygame.draw.ellipse(shadow,(35,49,40,42),shadow.get_rect())
         target.blit(shadow,(x-18,y-5))
         target.blit(sprite,(x-sprite.get_width()//2,y-sprite.get_height()))
+
+    def draw_bike(self,target,position,facing,moving,tick):
+        frames=self.bike_right if facing=="right" else self.bike_left
+        frame=int(tick//150)%len(frames) if moving else 0
+        sprite=frames[frame]
+        x,y=map(round,position)
+        shadow=pygame.Surface((58,12),pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow,(35,49,40,42),shadow.get_rect())
+        target.blit(shadow,(x-29,y-5))
+        target.blit(sprite,(x-sprite.get_width()//2,y-sprite.get_height()+2))
 
 class PaperWorld:
     def __init__(self):
@@ -122,6 +141,9 @@ class PaperWorld:
         for key,spec in ARCHITECTURE.items():
             if spec.get('renderer')=='tsinghua_lab':
                 self.facades[key]=tsinghua_lab()
+                continue
+            if spec.get('renderer')=='life_science_2':
+                self.facades[key]=life_science_2()
                 continue
             if spec['art'] not in atlases: atlases[spec['art']]=load_image(spec['art'])
             sheet=atlases[spec['art']]; w,h=sheet.get_size()
@@ -353,7 +375,7 @@ class PaperWorld:
     def camera_for(self,x,y):
         return pygame.Rect(max(0,min(WORLD_WIDTH-INTERNAL_WIDTH,round(x-INTERNAL_WIDTH/2))),max(0,min(WORLD_HEIGHT-INTERNAL_HEIGHT,round(y-INTERNAL_HEIGHT/2))),INTERNAL_WIDTH,INTERNAL_HEIGHT)
 
-    def draw_view(self,target,camera,actors,state,moving,tick):
+    def draw_view(self,target,camera,actors,state,moving,tick,riding_bike=False):
         target.blit(self.ground,(0,0),camera)
         layers=[]
         for x,y,image in self.trees:
@@ -371,7 +393,11 @@ class PaperWorld:
                 else:
                     x,y=tile_center(value["tile"]); n=sum(map(ord,value["id"]))
                     appearance={"shirt":n%6,"hair_color":n%5,"skin":n%4,"hair_style":n%4}; facing="down"
-                self.characters.draw(target,(x-camera.x,y-camera.y),facing,moving if kind=="player" else False,appearance,tick)
+                if kind=="player" and riding_bike:
+                    bike_facing=facing if facing in ("left","right") else "right"
+                    self.characters.draw_bike(target,(x-camera.x,y-camera.y),bike_facing,moving,tick)
+                else:
+                    self.characters.draw(target,(x-camera.x,y-camera.y),facing,moving if kind=="player" else False,appearance,tick)
         # Sparse restrained ripple motion, not floating pickup sparkles.
         for spec,points in self.water_shapes:
             water=pygame.Rect(min(x for x,y in points),min(y for x,y in points),1,1)

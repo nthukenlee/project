@@ -24,7 +24,7 @@ class Game:
         self.world=PaperWorld(); self.audio=AudioManager()
         self.state=GameState(); self.quests=QuestSystem(self.state)
         self.scene='title'; self.previous_scene='title'; self.panel_tab='map'
-        self.running=True; self.fullscreen=False; self.player_moving=False; self.riding_bike=False
+        self.running=True; self.fullscreen=False; self.player_moving=False; self.riding_bike=False; self.running_fast=False
         self.buttons=[]; self.inventory_rects=[]
         self.notification=''; self.notification_until=0; self.last_autosave=0
         self.dialog_speaker=''; self.dialog_lines=[]
@@ -112,6 +112,8 @@ class Game:
             key=event.key
             if key==pygame.K_F3: self.debug_mode=not self.debug_mode; return
             if key==pygame.K_F11: self._set_fullscreen(not self.fullscreen); return
+            if key in (pygame.K_LSHIFT,pygame.K_RSHIFT) and self.scene=='explore' and not getattr(event,'repeat',False):
+                self.running_fast=not self.running_fast; return
             if self.scene=='customize':
                 if key==pygame.K_BACKSPACE: self.custom_name=self.custom_name[:-1]
                 elif key==pygame.K_RETURN: self._new_game()
@@ -215,11 +217,15 @@ class Game:
         direction=pygame.Vector2(float(keys[pygame.K_d] or keys[pygame.K_RIGHT])-float(keys[pygame.K_a] or keys[pygame.K_LEFT]),float(keys[pygame.K_s] or keys[pygame.K_DOWN])-float(keys[pygame.K_w] or keys[pygame.K_UP]))
         self.player_moving=direction.length_squared()>0
         if self.player_moving:
-            direction=direction.normalize(); running=keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+            direction=direction.normalize(); running=self.running_fast
             speed=205 if running and self.state.energy>1 else 134
             if self.riding_bike: speed=275
             self._move(direction.x*speed*dt,direction.y*speed*dt)
-            self.state.facing=('left' if direction.x<0 else 'right') if abs(direction.x)>abs(direction.y) else ('up' if direction.y<0 else 'down')
+            if self.riding_bike:
+                if direction.x<0: self.state.facing='left'
+                elif direction.x>0: self.state.facing='right'
+            else:
+                self.state.facing=('left' if direction.x<0 else 'right') if abs(direction.x)>abs(direction.y) else ('up' if direction.y<0 else 'down')
             self.state.energy=max(0,self.state.energy-dt*(1 if running else .02))
         else: self.state.energy=min(100,self.state.energy+dt*.4)
         self._record_location()
@@ -373,7 +379,7 @@ class Game:
 
     def _draw_explore(self,mouse):
         camera=self.world.camera_for(self.state.player_x,self.state.player_y)
-        self.world.draw_view(self.canvas,camera,NPCS,self.state,self.player_moving,pygame.time.get_ticks())
+        self.world.draw_view(self.canvas,camera,NPCS,self.state,self.player_moving,pygame.time.get_ticks(),self.riding_bike)
         for b in BUILDINGS:
             door=self.world.door(b)
             if camera.collidepoint(door):
@@ -385,10 +391,6 @@ class Game:
             pos=pygame.Vector2(point['tile'])*TILE-pygame.Vector2(camera.topleft)
             if pygame.Rect(0,125,1280,440).collidepoint(pos):
                 self.fonts.draw(self.canvas,self.t(point['label']),(pos.x,pos.y+26),16,GREEN,True,'center')
-        if self.riding_bike:
-            x,y=self.state.player_x-camera.x,self.state.player_y-camera.y
-            for dx in (-15,15): pygame.draw.circle(self.canvas,(64,78,71),(round(x+dx),round(y-4)),11,2)
-            pygame.draw.aalines(self.canvas,GREEN,False,[(x-15,y-4),(x,y-20),(x+15,y-4),(x-3,y-4),(x-15,y-4)])
         if self.debug_mode:
             start_x=(camera.x//TILE)*TILE
             start_y=(camera.y//TILE)*TILE

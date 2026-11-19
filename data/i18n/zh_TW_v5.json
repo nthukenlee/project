@@ -45,7 +45,7 @@
   "v5.thirst":"飲水",
   "v5.energy":"體力",
   "v5.weather":"微風 · 晴時多雲",
-  "v5.controls":"WASD 移動　E 互動　M 地圖　Q 手札　C 宿舍導覽",
+  "v5.controls":"WASD 移動　Shift 切換跑步　E 互動　M 地圖　Q 手札　C 宿舍導覽",
   "v5.shop_hint":"E · 用餐與補水",
   "v5.map_hint":"點建築標記或目的地即可前往",
   "v5.progress":"旅程完成度 {value}%",

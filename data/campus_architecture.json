@@ -424,6 +424,30 @@
     ],
     "coverage": "photo_reference_redraw"
   },
+  "life_science_2": {
+    "marker_id": "life_science_2",
+    "source": "https://nscric.site.nthu.edu.tw/p/404-1186-252280.php",
+    "photo": "https://nscric.site.nthu.edu.tw/p/404-1186-252280.php",
+    "reference_lat": 24.7899,
+    "reference_lng": 120.9898,
+    "description_zh": "生命科學二館採三翼階梯量體、藍綠玻璃、淺色石面與中央挑高玻璃入口。",
+    "description_en": "Life Science II uses stepped laboratory wings, blue-green glazing, pale stone panels and a tall central glass entrance.",
+    "renderer": "life_science_2",
+    "art": "life-science-2-facade.png",
+    "coverage": "original_game_render"
+  },
+  "tsmc_hall": {
+    "marker_id": "27",
+    "source": "https://campusmap.cc.nthu.edu.tw/xml/Markersite.xml",
+    "photo": "Gemini generated reference",
+    "reference_lat": 24.78699,
+    "reference_lng": 120.98795,
+    "description_zh": "台積館以紅褐磚牆、規整方窗、挑空入口大堂與中央寬階梯形成鮮明輪廓。",
+    "description_en": "TSMC Hall uses red-brown brickwork, regular square windows, a tall open entrance hall and broad central steps.",
+    "art": "tsmc-hall-v1.png",
+    "crop": [0, 0, 1, 1],
+    "coverage": "generated_facade"
+  },
   "biomedical": {
     "marker_id": "22",
     "source": "https://campusmap.cc.nthu.edu.tw/",
