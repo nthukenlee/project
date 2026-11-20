@@ -11,20 +11,24 @@ from .localization import Localizer
 from .paperworld import PaperWorld
 from .audio import AudioManager
 from .ui import Button, FontBook, panel, INK, PAPER, MUTED, GREEN
+from .zombie_story import FINISHED, OBJECTIVES, RELAY, SHELTER, ZombieEncounter
+from .adventure import CampusAdventure, PATTERNS
 
 class Game:
     def __init__(self,save_dir: Path|None=None):
         if errors:=validate_content(): raise ValueError(str(errors))
         pygame.init()
-        pygame.display.set_caption('清華拾光 · 校門與大草坪修訂版 v7')
+        pygame.display.set_caption('清華拾光 · 暮色之前')
         self.screen=pygame.display.set_mode(WINDOW_SIZE,pygame.RESIZABLE)
         self.canvas=pygame.Surface(WINDOW_SIZE)
         self.clock=pygame.time.Clock()
         self.fonts=FontBook(); self.localizer=Localizer(); self.save_manager=SaveManager(save_dir)
         self.world=PaperWorld(); self.audio=AudioManager()
         self.state=GameState(); self.quests=QuestSystem(self.state)
+        self.zombies=ZombieEncounter()
+        self.adventure=CampusAdventure(self)
         self.scene='title'; self.previous_scene='title'; self.panel_tab='map'
-        self.running=True; self.fullscreen=False; self.player_moving=False; self.riding_bike=False
+        self.running=True; self.fullscreen=False; self.player_moving=False; self.riding_bike=False; self.running_fast=False
         self.buttons=[]; self.inventory_rects=[]
         self.notification=''; self.notification_until=0; self.last_autosave=0
         self.dialog_speaker=''; self.dialog_lines=[]
@@ -32,6 +36,7 @@ class Game:
         self.room_rect=pygame.Rect(330,74,620,620)
         self.custom_name=''; self.custom_appearance=dict(self.state.appearance)
         self.selected_dorm='education';self.architecture_page=0;self.map_list_page=0
+        self.debug_mode=False
         self.map_zoom=1.0; self.map_center=pygame.Vector2(WORLD_WIDTH/2,WORLD_HEIGHT/2)
         self.map_drag=None; self.map_cache_key=None
 
@@ -45,6 +50,7 @@ class Game:
             for event in pygame.event.get(): self._handle_event(event,mouse)
             if self.scene=='explore': self._update_explore(dt)
             elif self.scene=='interior': self._update_interior(dt)
+            elif self.scene=='adventure_intro': self.adventure.advance_intro(dt)
             self._draw(mouse); self._present()
         if self.state.play_seconds>0: self.save_manager.save(self.state,'auto')
         pygame.quit()
@@ -69,6 +75,11 @@ class Game:
 
     def _set_state(self,state):
         self.state=state; self.quests=QuestSystem(state); self.localizer.set_language(state.language)
+        self.zombies.reset()
+        self.adventure.reset_view()
+        self.current_interior=None
+        self.riding_bike=False
+        self.running_fast=False
         if self.fullscreen!=state.fullscreen: self._set_fullscreen(state.fullscreen)
         self._ensure_walkable()
 
@@ -90,7 +101,9 @@ class Game:
     def _continue_game(self):
         slot=self.save_manager.newest_available()
         state=self.save_manager.load(slot) if slot is not None else None
-        if state: self._set_state(state); self.scene='explore'
+        if state:
+            self._set_state(state)
+            self.scene='adventure_intro' if state.adventure_step=='intro' else 'explore'
         else: self._new_game()
 
     def _handle_event(self,event,mouse):
@@ -109,7 +122,22 @@ class Game:
             self.custom_name=(self.custom_name+''.join(c for c in event.text if c.isprintable()))[:12]
         if event.type==pygame.KEYDOWN:
             key=event.key
+            if key==pygame.K_F3: self.debug_mode=not self.debug_mode; return
             if key==pygame.K_F11: self._set_fullscreen(not self.fullscreen); return
+            if self.scene=='adventure_intro':
+                if key in (pygame.K_ESCAPE,pygame.K_RETURN): self.adventure.finish_intro()
+                return
+            if self.scene=='adventure_card':
+                if self.adventure.card_key=='beacon':
+                    if pygame.K_1<=key<=pygame.K_3: self.adventure.answer(PATTERNS[key-pygame.K_1])
+                    elif key==pygame.K_ESCAPE: self.adventure.close_card()
+                elif key in (pygame.K_ESCAPE,pygame.K_RETURN,pygame.K_e,pygame.K_SPACE):
+                    self.adventure.close_card()
+                return
+            if self.scene=='adventure_journal' and key in (pygame.K_ESCAPE,pygame.K_q):
+                self.scene='explore'; return
+            if key in (pygame.K_LSHIFT,pygame.K_RSHIFT) and self.scene=='explore' and not getattr(event,'repeat',False):
+                self.running_fast=not self.running_fast; return
             if self.scene=='customize':
                 if key==pygame.K_BACKSPACE: self.custom_name=self.custom_name[:-1]
                 elif key==pygame.K_RETURN: self._new_game()
@@ -117,7 +145,7 @@ class Game:
             elif self.scene=='explore':
                 if key in (pygame.K_e,pygame.K_RETURN): self._interact()
                 elif key==pygame.K_m: self.scene='map'
-                elif key==pygame.K_q: self.scene='notebook'
+                elif key==pygame.K_q: self.scene='adventure_journal' if self.adventure.journal_active else 'notebook'
                 elif key==pygame.K_c: self.scene='guide'
                 elif key==pygame.K_SPACE: self._use_selected_item()
                 elif key==pygame.K_b: self._use_tool('bike')
@@ -143,10 +171,30 @@ class Game:
             pygame.key.start_text_input(); self.scene='customize'
         elif action=='custom_start': self._new_game()
         elif action=='continue': self._continue_game()
+        elif action=='adventure:start': self.adventure.start_or_resume()
+        elif action=='adventure:skip': self.adventure.finish_intro()
+        elif action=='adventure:close': self.adventure.close_card()
+        elif action=='adventure:return': self.scene='explore'
+        elif action=='adventure:other_quests': self.scene='notebook'
+        elif action=='adventure:journal': self.scene='adventure_journal'
+        elif action.startswith('adventure:pattern:'): self.adventure.answer(action.rsplit(':',1)[1])
         elif action=='dorm_tour':
             self._continue_game(); self._travel('xin_hall')
         elif action=='campus_tour':
             self._continue_game();self._button_action('landscape:big_lawn')
+        elif action=='zombie_chapter':
+            self._continue_game()
+            self.adventure.suspended=True
+            self.scene='explore'
+            self.state.player_x,self.state.player_y=SHELTER.position
+            self.zombies.reset()
+            self.riding_bike=False
+            self.running_fast=False
+            if self.state.zombie_stage==0:
+                self._interact_zombie_story()
+            else:
+                self._notify(self.t('zombie.objective.'+str(self.state.zombie_stage)))
+                self.save_manager.save(self.state,'auto')
         elif action=='quit': self.running=False
         elif action in ('resume','close'): self.scene='explore'
         elif action=='leave': self._leave_special_area()
@@ -158,6 +206,7 @@ class Game:
             self.localizer.set_language('en' if self.localizer.language=='zh_TW' else 'zh_TW'); self.state.language=self.localizer.language
         elif action=='fullscreen': self._set_fullscreen(not self.fullscreen)
         elif action=='lake':
+            if self._travel_blocked(): return
             self.state.player_x,self.state.player_y=tile_center(LAKE_ENTRANCE_TILE)
             self._ensure_walkable(); self.scene='explore'; self._record_location()
             self._notify(self.t('lake.west_entry')); self.save_manager.save(self.state,'auto')
@@ -172,6 +221,7 @@ class Game:
         elif action.startswith('map_page:'):
             self.map_list_page=(self.map_list_page+int(action.split(':')[1]))%math.ceil(len(self._map_destinations())/7)
         elif action.startswith('landscape:'):
+            if self._travel_blocked(): return
             feature=next(p for p in SCENERY_POINTS if p['id']==action.split(':')[1])
             self.state.player_x,self.state.player_y=pygame.Vector2(feature['tile'])*TILE
             self._ensure_walkable();self.scene='explore';self._record_location()
@@ -187,11 +237,21 @@ class Game:
             self.custom_appearance[field]=(self.custom_appearance.get(field,0)+1)%limit
 
     def _travel(self,building_id):
+        if self._travel_blocked(): return
         building=next(b for b in BUILDINGS if b['id']==building_id)
         door=self.world.door(building)
         self.state.player_x,self.state.player_y=door.x,door.y+24
         self._ensure_walkable(); self.scene='explore'; self._record_location()
         self._notify(self.t(building['label'])); self.save_manager.save(self.state,'auto')
+
+    def _travel_blocked(self):
+        if self.adventure.lake_danger and any(enemy.chasing for enemy in self.zombies.enemies):
+            player=pygame.Vector2(self.state.player_x,self.state.player_y)
+            if any(enemy.chasing and enemy.position.distance_to(player)<255 for enemy in self.zombies.enemies):
+                self._notify(self.t('adventure.travel_blocked'))
+                if self.scene=='map': self.scene='explore'
+                return True
+        return False
 
     def _player_rect(self,x=None,y=None):
         return pygame.Rect(round((self.state.player_x if x is None else x)-8),round((self.state.player_y if y is None else y)-6),16,13)
@@ -203,7 +263,8 @@ class Game:
             if not self.world.collides(self._player_rect(y=self.state.player_y+dy/steps)): self.state.player_y+=dy/steps
 
     def _update_explore(self,dt):
-        self.state.play_seconds+=dt; self.state.time_minutes+=dt*1.5
+        self.state.play_seconds+=dt
+        if not self.adventure.current: self.state.time_minutes+=dt*1.5
         if self.state.time_minutes>=22*60:
             self.state.day+=1; self.state.time_minutes=7*60; self.state.energy=100
         factor={'easy':.06,'normal':.10,'hard':.18}.get(self.state.difficulty,.1)
@@ -213,13 +274,25 @@ class Game:
         direction=pygame.Vector2(float(keys[pygame.K_d] or keys[pygame.K_RIGHT])-float(keys[pygame.K_a] or keys[pygame.K_LEFT]),float(keys[pygame.K_s] or keys[pygame.K_DOWN])-float(keys[pygame.K_w] or keys[pygame.K_UP]))
         self.player_moving=direction.length_squared()>0
         if self.player_moving:
-            direction=direction.normalize(); running=keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+            direction=direction.normalize(); running=self.running_fast
             speed=205 if running and self.state.energy>1 else 134
             if self.riding_bike: speed=275
             self._move(direction.x*speed*dt,direction.y*speed*dt)
-            self.state.facing=('left' if direction.x<0 else 'right') if abs(direction.x)>abs(direction.y) else ('up' if direction.y<0 else 'down')
+            if self.riding_bike:
+                if direction.x<0: self.state.facing='left'
+                elif direction.x>0: self.state.facing='right'
+            else:
+                self.state.facing=('left' if direction.x<0 else 'right') if abs(direction.x)>abs(direction.y) else ('up' if direction.y<0 else 'down')
             self.state.energy=max(0,self.state.energy-dt*(1 if running else .02))
         else: self.state.energy=min(100,self.state.energy+dt*.4)
+        encounter=self.zombies.update(self.state,dt,self.world.collides,enabled=self.adventure.enemies_active)
+        if encounter:
+            self._notify(self.t(encounter))
+            self.audio.play('select')
+            if encounter=='zombie.rescued':
+                self.riding_bike=False
+                self.player_moving=False
+                self.save_manager.save(self.state,'auto')
         self._record_location()
         if pygame.time.get_ticks()-self.last_autosave>45000:
             self.save_manager.save(self.state,'auto'); self.last_autosave=pygame.time.get_ticks()
@@ -236,15 +309,27 @@ class Game:
 
     def _nearby(self):
         player=pygame.Vector2(self.state.player_x,self.state.player_y)
+        for key,stop in self.adventure.outdoor_stops():
+            if player.distance_to(stop.position(self.world))<65:
+                return 'adventure',{'key':key,'label':f'adventure.stop.{key}'}
         candidates=[(player.distance_to(tile_center(n['tile'])),'npc',n) for n in NPCS]
         candidates += [(player.distance_to(self.world.door(b)),'building',b) for b in BUILDINGS]
         candidates += [(player.distance_to(tile_center(s['tile'])),'shop',s) for s in SHOPS]
         candidates += [(player.distance_to((p['tile'][0]*TILE,p['tile'][1]*TILE)),'landscape',p) for p in LAKE_POINTS+SCENERY_POINTS]
+        if not self.adventure.current and self.state.zombie_stage < FINISHED:
+            stop=OBJECTIVES[self.state.zombie_stage]
+            candidates.append((player.distance_to(stop.position),'zombie_story',stop))
         distance,kind,value=min(candidates,key=lambda v:v[0])
         return (kind,value) if distance<65 else (None,None)
 
     def _interact(self):
         kind,item=self._nearby()
+        if kind=='adventure':
+            self.adventure.interact(item['key'])
+            return
+        if kind=='zombie_story':
+            self._interact_zombie_story()
+            return
         if kind=='building':
             self.current_interior=item; self.room_position=pygame.Vector2(.5,.80); self.scene='interior'; self.riding_bike=False
         elif kind=='landscape':
@@ -263,6 +348,22 @@ class Game:
         else: self._notify(self.t('v5.approach'))
         self.save_manager.save(self.state,'auto')
 
+    def _interact_zombie_story(self):
+        stage=self.state.zombie_stage
+        if stage>=FINISHED:
+            return
+        stop=OBJECTIVES[stage]
+        self.dialog_speaker=self.t(stop.label)
+        self.dialog_lines=[self.t(f'zombie.story.{stage}')]
+        self.state.zombie_stage+=1
+        if self.state.zombie_stage==FINISHED:
+            self.state.health=100
+            self.audio.play('quest')
+        else:
+            self.audio.play('voice')
+        self.scene='dialog'
+        self.save_manager.save(self.state,'auto')
+
     def _completed(self,ids):
         if ids:
             self.audio.play('quest'); self._notify(self.t('v5.quest_done'))
@@ -273,7 +374,8 @@ class Game:
     def _use_selected_item(self): self._use_tool(self._inventory_items()[self.state.inventory_selected][0])
 
     def _use_tool(self,tool):
-        if tool in ('map','notebook'): self.scene=tool
+        if tool in ('map','notebook'):
+            self.scene='adventure_journal' if tool=='notebook' and self.adventure.journal_active else tool
         elif tool=='bike': self.riding_bike=not self.riding_bike; self._notify(self.t('v5.bike_on' if self.riding_bike else 'v5.bike_off'))
         elif tool=='camera':
             player=pygame.Vector2(self.state.player_x,self.state.player_y)
@@ -315,6 +417,9 @@ class Game:
         distance,kind=min((self.room_position.distance_to(pos),kind) for kind,pos in self._room_objects())
         if distance>.23: self._notify(self.t('v5.room_hint')); return
         building=self.current_interior
+        if self.adventure.interior_matches(building['id'],kind):
+            self.adventure.interact(self.adventure.current.key,'interior')
+            return
         self.state.observations.add(building['id']+':'+kind)
         if kind=='bed': self.state.energy=100; self._notify(self.t('v5.rested'))
         elif kind=='water': self.state.thirst=100; self.state.supplies['water']=3; self._notify(self.t('v5.water_filled'))
@@ -332,6 +437,14 @@ class Game:
     def _draw(self,mouse):
         self.buttons=[]; self.canvas.fill(PAPER)
         if self.scene=='title': self._draw_title(mouse)
+        elif self.scene=='adventure_intro': self.adventure.draw_intro(mouse)
+        elif self.scene=='adventure_card':
+            if self.adventure.card_return=='interior':
+                self._draw_interior(mouse)
+            else:
+                self._draw_explore(mouse)
+            self.buttons.clear()
+            self.adventure.draw_card(mouse)
         elif self.scene=='customize': self._draw_customize(mouse)
         elif self.scene=='interior': self._draw_interior(mouse)
         elif self.scene=='settings': self._draw_settings(mouse)
@@ -340,6 +453,9 @@ class Game:
             if self.scene=='dialog': self._draw_dialog()
             elif self.scene=='map': self._draw_map(mouse)
             elif self.scene=='notebook': self._draw_notebook(mouse)
+            elif self.scene=='adventure_journal':
+                self.buttons.clear()
+                self.adventure.draw_journal(mouse)
             elif self.scene=='guide': self._draw_guide(mouse)
             elif self.scene=='pause': self._draw_pause(mouse)
             elif self.scene=='save_menu': self._draw_slots(mouse)
@@ -353,8 +469,8 @@ class Game:
         panel(self.canvas,(70,75,510,570),alpha=244)
         self.fonts.draw(self.canvas,self.t('game.title'),(110,115),54,GREEN,True)
         self.fonts.draw(self.canvas,self.t('v5.subtitle'),(113,190),22,MUTED)
-        labels=[('menu.continue','continue',self.save_manager.newest_available() is not None),('menu.new_game','new',True),('v7.campus_tour','campus_tour',True),('menu.settings','settings',True),('menu.quit','quit',True)]
-        for i,(key,action,enabled) in enumerate(labels): self._button((110,258+i*63,430,48),self.t(key),action,mouse,enabled,i==0)
+        labels=[('adventure.menu','adventure:start',True),('menu.continue','continue',self.save_manager.newest_available() is not None),('zombie.menu','zombie_chapter',True),('menu.new_game','new',True),('v7.campus_tour','campus_tour',True),('menu.settings','settings',True),('menu.quit','quit',True)]
+        for i,(key,action,enabled) in enumerate(labels): self._button((110,244+i*53,430,43),self.t(key),action,mouse,enabled,i==0)
         self.fonts.draw(self.canvas,self.t('game.disclaimer'),(1240,690),14,INK,False,'bottomright')
 
     def _draw_customize(self,mouse):
@@ -371,7 +487,30 @@ class Game:
 
     def _draw_explore(self,mouse):
         camera=self.world.camera_for(self.state.player_x,self.state.player_y)
-        self.world.draw_view(self.canvas,camera,NPCS,self.state,self.player_moving,pygame.time.get_ticks())
+        enemies=self.zombies.enemies if self.adventure.enemies_active else ()
+        tick=pygame.time.get_ticks()
+        self.world.draw_view(self.canvas,camera,NPCS,self.state,self.player_moving,tick,self.riding_bike,enemies)
+        beacon_visible=self.state.zombie_stage>=3 or self.adventure.lake_danger or self.state.adventure_step in ('xin','complete')
+        if beacon_visible and camera.collidepoint(RELAY.position):
+            x,y=map(round,RELAY.position-pygame.Vector2(camera.topleft))
+            pygame.draw.line(self.canvas,(71,73,62),(x,y),(x,y-32),5)
+            if self.adventure.beacon_on(tick):
+                pygame.draw.circle(self.canvas,(235,142,85),(x,y-33),12,2)
+                pygame.draw.circle(self.canvas,(211,65,52),(x,y-33),6)
+            else:
+                pygame.draw.circle(self.canvas,(107,76,63),(x,y-33),6)
+        if not self.adventure.current and self.state.zombie_stage<FINISHED:
+            stop=OBJECTIVES[self.state.zombie_stage]
+            if camera.collidepoint(stop.position):
+                position=stop.position-pygame.Vector2(camera.topleft)
+                pygame.draw.circle(self.canvas,(145,78,60),position,11,3)
+                self.fonts.draw(self.canvas,self.t(stop.label),(position.x,position.y-21),19,INK,True,'midbottom')
+        for key,stop in self.adventure.outdoor_stops():
+            position=stop.position(self.world)
+            if camera.collidepoint(position):
+                position-=pygame.Vector2(camera.topleft)
+                pygame.draw.circle(self.canvas,(174,115,64),position,11,3)
+                self.fonts.draw(self.canvas,self.t(f'adventure.stop.{key}'),(position.x,position.y-22),19,INK,True,'midbottom')
         for b in BUILDINGS:
             door=self.world.door(b)
             if camera.collidepoint(door):
@@ -383,28 +522,56 @@ class Game:
             pos=pygame.Vector2(point['tile'])*TILE-pygame.Vector2(camera.topleft)
             if pygame.Rect(0,125,1280,440).collidepoint(pos):
                 self.fonts.draw(self.canvas,self.t(point['label']),(pos.x,pos.y+26),16,GREEN,True,'center')
-        if self.riding_bike:
-            x,y=self.state.player_x-camera.x,self.state.player_y-camera.y
-            for dx in (-15,15): pygame.draw.circle(self.canvas,(64,78,71),(round(x+dx),round(y-4)),11,2)
-            pygame.draw.aalines(self.canvas,GREEN,False,[(x-15,y-4),(x,y-20),(x+15,y-4),(x-3,y-4),(x-15,y-4)])
+        if self.debug_mode:
+            start_x=(camera.x//TILE)*TILE
+            start_y=(camera.y//TILE)*TILE
+            for x in range(start_x,camera.x+1280,TILE):
+                tx=x//TILE
+                pygame.draw.line(self.canvas,(180,180,180),(x-camera.x,0),(x-camera.x,720),1)
+                if tx%5==0: self.fonts.draw(self.canvas,str(tx),(x-camera.x+2,2),12,(180,50,50))
+            for y in range(start_y,camera.y+720,TILE):
+                ty=y//TILE
+                pygame.draw.line(self.canvas,(180,180,180),(0,y-camera.y),(1280,y-camera.y),1)
+                if ty%5==0: self.fonts.draw(self.canvas,str(ty),(2,y-camera.y+2),12,(180,50,50))
+            mx,my=self.world.camera_for(self.state.player_x,self.state.player_y).topleft
+            mx+=mouse[0]; my+=mouse[1]
+            itx,ity=mx//TILE,my//TILE
+            label=f'Tile: [{itx}, {ity}] ({mx}, {my})'
+            tw=self.fonts.get(14).size(label)[0]+10
+            panel(self.canvas,(mouse[0]+15,mouse[1]-25,tw,22),alpha=200)
+            self.fonts.draw(self.canvas,label,(mouse[0]+20,mouse[1]-21),14,INK)
         hour=self.state.time_minutes/60
         if hour>=19:
             dusk=pygame.Surface(WINDOW_SIZE,pygame.SRCALPHA); dusk.fill((26,47,63,50)); self.canvas.blit(dusk,(0,0))
         self._draw_hud(mouse)
 
     def _draw_hud(self,mouse):
-        panel(self.canvas,(22,20,290,99),alpha=237)
+        active=self.adventure.enemies_active
+        panel(self.canvas,(22,20,290,119 if active else 99),alpha=237)
         self.fonts.draw(self.canvas,self.state.player_name,(40,31),21,GREEN,True)
         for i,(key,value,color) in enumerate([('v5.hunger',self.state.hunger,(163,119,94)),('v5.thirst',self.state.thirst,(104,151,162)),('v5.energy',self.state.energy,(142,156,112))]):
             y=61+i*16; self.fonts.draw(self.canvas,self.t(key),(40,y-3),13,MUTED)
             pygame.draw.rect(self.canvas,(220,223,209),(105,y,180,7),border_radius=3)
             pygame.draw.rect(self.canvas,color,(105,y,round(180*value/100),7),border_radius=3)
+        if active:
+            self.fonts.draw(self.canvas,self.t('zombie.health'),(40,107),13,MUTED)
+            pygame.draw.rect(self.canvas,(220,223,209),(105,109,180,7),border_radius=3)
+            pygame.draw.rect(self.canvas,(165,71,62),(105,109,round(180*self.state.health/100),7),border_radius=3)
+        if self.adventure.current:
+            key=self.adventure.current.key
+            panel(self.canvas,(327,20,740,58),alpha=237)
+            self.fonts.draw(self.canvas,self.t('adventure.goal.'+key),(697,49),18,INK,True,'center')
+        elif 0<self.state.zombie_stage<FINISHED:
+            panel(self.canvas,(327,20,608,58),alpha=237)
+            self.fonts.draw(self.canvas,self.t('zombie.objective.'+str(self.state.zombie_stage)),(631,49),18,INK,True,'center')
         panel(self.canvas,(1092,20,164,78),alpha=235)
         hour,minute=divmod(int(self.state.time_minutes),60)
         self.fonts.draw(self.canvas,f'D{self.state.day}  {hour:02d}:{minute:02d}',(1174,44),24,GREEN,True,'center')
         self.fonts.draw(self.canvas,self.t('v5.weather'),(1174,76),14,MUTED,False,'center')
         kind,item=self._nearby()
         hint='E · '+self.t(item['name'] if kind=='npc' else item['label']) if kind in ('npc','building','landscape') else self.t('v5.controls')
+        if kind=='zombie_story': hint='E · '+self.t(item.label)
+        if kind=='adventure': hint='E · '+self.t(item['label'])
         if kind=='shop': hint=self.t('v5.shop_hint')
         width=min(1000,self.fonts.get(17).size(hint)[0]+36)
         panel(self.canvas,((1280-width)//2,583,width,33),alpha=235)
@@ -470,6 +637,20 @@ class Game:
             self.fonts.draw(self.canvas,self.t(key),map_point(pygame.Vector2(pos)*TILE),14,GREEN,True)
         for point in SCENERY_POINTS:
             self.fonts.draw(self.canvas,self.t(point['label']),map_point(pygame.Vector2(point['tile'])*TILE),13,GREEN,True)
+        if self.adventure.current:
+            stop=self.adventure.current
+            marker=map_point(stop.position(self.world))
+            pygame.draw.circle(self.canvas,(255,241,197),marker,9)
+            pygame.draw.circle(self.canvas,(171,104,57),marker,7,3)
+            if self.map_zoom>=2:
+                self.fonts.draw(self.canvas,self.t('adventure.stop.'+stop.key),(marker[0]+12,marker[1]+5),15,INK,True)
+        elif self.state.zombie_stage<FINISHED:
+            stop=OBJECTIVES[self.state.zombie_stage]
+            marker=map_point(stop.position)
+            pygame.draw.circle(self.canvas,(249,240,219),marker,8)
+            pygame.draw.circle(self.canvas,(145,78,60),marker,6,2)
+            if self.map_zoom>=2:
+                self.fonts.draw(self.canvas,self.t(stop.label),(marker[0]+10,marker[1]+3),15,INK,True)
         pygame.draw.circle(self.canvas,(163,84,58),map_point((self.state.player_x,self.state.player_y)),6)
         self.canvas.set_clip(None)
         self.fonts.draw(self.canvas,self.t('v5.map_hint'),(855,114),16,GREEN,True)
@@ -482,6 +663,8 @@ class Game:
         self._button((934,563,72,37),'+','map_plus',mouse)
         self._button((1013,563,182,37),self.t('v6.map_overview'),'map_reset',mouse)
         self.fonts.draw(self.canvas,self.t('v6.map_controls'),(855,618),14,MUTED)
+        if self.adventure.current:
+            self._button((855,638,340,34),self.t('adventure.map_goal'),'adventure:journal',mouse)
         self._button((1055,61,140,38),self.t('menu.back'),'close',mouse)
 
     def _map_destinations(self):
@@ -518,7 +701,11 @@ class Game:
             self.fonts.draw(self.canvas,self.t(q['title']),(x+16,y+12),21,GREEN,True)
             for j,line in enumerate(self.fonts.wrapped(self.t(q['desc']),16,465)[:2]): self.fonts.draw(self.canvas,line,(x+16,y+43+j*19),16,MUTED)
             self.fonts.draw(self.canvas,('✓' if value['status']=='completed' else f'{current}/{total}'),(x+505,y+72),19,GREEN,True,'topright')
+        if self.state.zombie_stage:
+            self.fonts.draw(self.canvas,self.t('zombie.objective.'+str(self.state.zombie_stage)),(90,604),17,INK,True)
         self.fonts.draw(self.canvas,self.t('v5.observations',photos=len(self.state.photos),notes=len(self.state.observations)),(90,635),17,MUTED)
+        if self.adventure.journal_active:
+            self._button((752,628,410,35),self.t('adventure.title'),'adventure:journal',mouse)
         self._button((1060,65,125,39),self.t('menu.back'),'close',mouse)
 
     def _draw_guide(self,mouse):
@@ -558,7 +745,9 @@ class Game:
         self.fonts.draw(self.canvas,self.t('v5.room_activities'),(995,125),22,GREEN,True)
         for i,(kind,pos) in enumerate(self._room_objects()):
             near=self.room_position.distance_to(pos)<.23
-            self.fonts.draw(self.canvas,('E · ' if near else '· ')+self.t('interior.object.'+kind),(995,185+i*54),18,GREEN if near else MUTED,near)
+            story=self.adventure.interior_matches(b['id'],kind)
+            key='adventure.fixture.'+kind if story else 'interior.object.'+kind
+            self.fonts.draw(self.canvas,('E · ' if near else '· ')+self.t(key),(995,185+i*54),18,GREEN if near or story else MUTED,near or story)
             if near:
                 x=self.room_rect.x+pos[0]*620; y=self.room_rect.y+pos[1]*620
                 pygame.draw.circle(self.canvas,(143,151,114),(round(x),round(y)),9,1)

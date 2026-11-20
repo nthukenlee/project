@@ -39,7 +39,7 @@
   "plaza.quest_text": "{name}, would you help make a lake observation page? Photograph the left shore, read the notice board and return. The camera is in slot 4; press Space to use it.",
   "plaza.quest_done": "Beautiful reflections! Your observation is complete. Here is a lake lamp and four stones for decorating your dorm.",
   "plaza.thanks": "Thank you! You can explore the library, tend flowers, or follow the path into campus.",
-  "hud.interact": "E Interact", "hud.map": "M Map", "hud.run": "Shift Run", "hud.use": "Space Use Tool", "hud.craft": "B Craft", "hud.quest": "Quest",
+  "hud.interact": "E Interact", "hud.map": "M Map", "hud.run": "Shift Toggle Run", "hud.use": "Space Use Tool", "hud.craft": "B Craft", "hud.quest": "Quest",
   "hud.collection": "Light {found}/30", "hud.progress": "Completion {percent}%",
   "inventory.map": "Campus Map", "inventory.quests": "Quest Journal", "inventory.collection": "Memory Collection",
   "inventory.empty": "Empty Slot", "inventory.selected": "Selected: {name}",

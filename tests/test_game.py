@@ -7,21 +7,35 @@ from pathlib import Path
 os.environ.setdefault('SDL_VIDEODRIVER','dummy')
 os.environ.setdefault('SDL_AUDIODRIVER','dummy')
 
+import pygame
 from nthu_adventure import content
 from nthu_adventure.content import BUILDINGS,NPCS,QUESTS,DORMS,SPAWN_TILE,tile_center,validate_content
 from nthu_adventure.constants import SAVE_VERSION,TILE,MAP_COLS,MAP_ROWS
 from nthu_adventure.state import GameState,QuestSystem,migrate_save
 from nthu_adventure.savegame import SaveManager
 from nthu_adventure.localization import Localizer
-from nthu_adventure.geometry import pixel_points
+from nthu_adventure.geometry import pixel_points, smooth_path
 
 TEMP_ROOT=Path(__file__).resolve().parents[1]/'work'/'test-temp'
 TEMP_ROOT.mkdir(parents=True,exist_ok=True)
 
 class ContentTests(unittest.TestCase):
+    def test_roads_are_sampled_as_bounded_smooth_paths(self):
+        points = [(0, 0), (10, 10), (20, 0)]
+        smooth = smooth_path(points, spacing=2)
+
+        self.assertEqual(smooth[0], pygame.Vector2(points[0]))
+        self.assertEqual(smooth[-1], pygame.Vector2(points[-1]))
+        self.assertNotEqual(smooth[4], pygame.Vector2((5, 5)))
+        for point in smooth:
+            self.assertGreaterEqual(point.x, 0)
+            self.assertLessEqual(point.x, 20)
+            self.assertGreaterEqual(point.y, 0)
+            self.assertLessEqual(point.y, 10)
+
     def test_data_and_removed_pickups(self):
         self.assertEqual(validate_content(),[])
-        self.assertEqual(len(BUILDINGS),34)
+        self.assertEqual(len(BUILDINGS),36)
         self.assertEqual(len(QUESTS),8)
         for removed in ('COLLECTIBLES','RESOURCE_NODES','HIDDEN_ITEMS','RECIPES'):
             self.assertFalse(hasattr(content,removed),removed)
@@ -61,6 +75,8 @@ class ContentTests(unittest.TestCase):
         self.assertLess(buildings['xin_hall'].x,buildings['ren_hall'].x)
         self.assertGreater(buildings['xin_hall'].y,content.LAKE_ENTRANCE_TILE[1])
         self.assertLess(buildings['humanities_building'].x,buildings['xin_hall'].x)
+        self.assertLess(buildings['faculty_housing'].x,buildings['education'].x)
+        self.assertLess(buildings['faculty_housing'].y,buildings['education'].y)
         localizer=Localizer()
         for language in localizer.supported:
             localizer.set_language(language)
@@ -248,6 +264,16 @@ class RuntimeTests(unittest.TestCase):
         g._update_explore(.01)
         self.assertFalse(hasattr(g.state,'collected'))
         self.assertNotIn('collected',g.state.to_dict())
+
+    def test_shift_toggles_running_instead_of_requiring_hold(self):
+        g=self.game
+        g.scene='explore'; g.running_fast=False
+        g._handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT, repeat=False), (0,0))
+        self.assertTrue(g.running_fast)
+        g._handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT, repeat=True), (0,0))
+        self.assertTrue(g.running_fast)
+        g._handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT, repeat=False), (0,0))
+        self.assertFalse(g.running_fast)
 
     def test_every_road_shore_walk_and_entrance_is_unblocked(self):
         g=self.game

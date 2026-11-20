@@ -1,0 +1,915 @@
+{
+  "rooms": {
+    "education": [
+      "answer",
+      "notices",
+      "blackboard_trace"
+    ],
+    "main_library": [
+      "counter_trade",
+      "reading_steps",
+      "return_cart"
+    ],
+    "xin_hall": [
+      "one_seat",
+      "wait_roommate",
+      "borrowed_blanket"
+    ],
+    "general_2": [
+      "alternate_route",
+      "changed_sign"
+    ],
+    "general_3": [
+      "occupied_class",
+      "wall_knocks",
+      "lit_projector"
+    ],
+    "general_4": [
+      "check_in",
+      "parcel",
+      "study_kit"
+    ],
+    "engineering_1": [
+      "other_side",
+      "unlit_corridor",
+      "emergency_drawer",
+      "parts_radio"
+    ],
+    "physics": [
+      "echo",
+      "borrow_lamp"
+    ],
+    "chemistry": [
+      "closed_hall",
+      "one_bottle"
+    ],
+    "gym": [
+      "court_crossing",
+      "whistle",
+      "bleacher_watch",
+      "injured_runner"
+    ],
+    "dining_hall": [
+      "door_cry",
+      "last_water",
+      "pantry_latch",
+      "tray_alarm"
+    ],
+    "ren_hall": [
+      "stranger_at_door",
+      "stay_behind",
+      "double_knock",
+      "night_latch"
+    ],
+    "shi_hall": [
+      "brief_allies",
+      "different_accounts"
+    ],
+    "li_hall": [
+      "knows_name",
+      "rest_place"
+    ],
+    "yi_hall": [
+      "appointment",
+      "missing_keeper"
+    ],
+    "admin_hall": [
+      "shift_register",
+      "queue_for_help",
+      "dead_intercom",
+      "service_latch"
+    ],
+    "engineering_2": [
+      "test_signal",
+      "two_doorways"
+    ],
+    "computer_science": [
+      "archived_voice",
+      "borrowed_keycard"
+    ],
+    "student_center": [
+      "ration_queue",
+      "empty_food_court",
+      "forgotten_change",
+      "folded_kit"
+    ],
+    "humanities_building": [
+      "redacted_testimony",
+      "library_refuge",
+      "last_reader"
+    ]
+  },
+  "outdoor": {
+    "lawn_guide": [
+      124,
+      56
+    ],
+    "lake_cry": [
+      94,
+      86
+    ],
+    "stormfront": [
+      118,
+      72
+    ],
+    "road_allies": [
+      94,
+      81
+    ],
+    "road_betrayal": [
+      103,
+      119
+    ],
+    "false_departure": [
+      92,
+      96
+    ],
+    "gate_runner": [
+      137,
+      45
+    ],
+    "lawn_marker": [
+      119,
+      57
+    ],
+    "library_stairs": [
+      105,
+      63
+    ],
+    "clock_radio": [
+      111,
+      71
+    ],
+    "bench_partner": [
+      98,
+      83
+    ],
+    "puddled_bag": [
+      113,
+      76
+    ],
+    "dormitory_cart": [
+      100,
+      101
+    ],
+    "split_road": [
+      97,
+      107
+    ],
+    "distant_signal": [
+      110,
+      112
+    ],
+    "service_case": [
+      131,
+      68
+    ],
+    "lawn_ringing_cart": [
+      121,
+      60
+    ],
+    "plaza_ration": [
+      105,
+      67
+    ],
+    "shore_timer": [
+      99,
+      89
+    ],
+    "south_cache_note": [
+      105,
+      111
+    ]
+  },
+  "events": {
+    "answer": {
+      "activity": "investigate",
+      "roles": [
+        "student",
+        "aide",
+        "mimic"
+      ]
+    },
+    "notices": {
+      "activity": "verify",
+      "roles": [
+        "student",
+        "aide",
+        "guard"
+      ]
+    },
+    "counter_trade": {
+      "activity": "trade",
+      "roles": [
+        "worker",
+        "reader",
+        "hoarder"
+      ]
+    },
+    "reading_steps": {
+      "activity": "investigate",
+      "roles": [
+        "worker",
+        "reader",
+        "mimic"
+      ],
+      "after": "17:48"
+    },
+    "one_seat": {
+      "activity": "shelter",
+      "roles": [
+        "resident",
+        "stranded",
+        "hoarder"
+      ],
+      "after": "17:46"
+    },
+    "wait_roommate": {
+      "activity": "wait",
+      "roles": [
+        "resident",
+        "stranded",
+        "teammate"
+      ]
+    },
+    "alternate_route": {
+      "activity": "route",
+      "roles": [
+        "student",
+        "guide",
+        "guard"
+      ]
+    },
+    "changed_sign": {
+      "activity": "verify",
+      "roles": [
+        "student",
+        "guide",
+        "mimic"
+      ]
+    },
+    "occupied_class": {
+      "activity": "information",
+      "roles": [
+        "graduate",
+        "group",
+        "hoarder"
+      ]
+    },
+    "wall_knocks": {
+      "activity": "investigate",
+      "roles": [
+        "graduate",
+        "group",
+        "mimic"
+      ]
+    },
+    "check_in": {
+      "activity": "verify",
+      "roles": [
+        "worker",
+        "student",
+        "mimic"
+      ]
+    },
+    "parcel": {
+      "activity": "share",
+      "roles": [
+        "worker",
+        "student",
+        "hoarder"
+      ]
+    },
+    "other_side": {
+      "activity": "route",
+      "roles": [
+        "aide",
+        "caretaker",
+        "mimic"
+      ]
+    },
+    "unlit_corridor": {
+      "activity": "light",
+      "roles": [
+        "aide",
+        "caretaker",
+        "stranded"
+      ]
+    },
+    "echo": {
+      "activity": "investigate",
+      "roles": [
+        "graduate",
+        "reader",
+        "mimic"
+      ]
+    },
+    "borrow_lamp": {
+      "activity": "light",
+      "roles": [
+        "graduate",
+        "guide",
+        "hoarder"
+      ]
+    },
+    "closed_hall": {
+      "activity": "route",
+      "roles": [
+        "graduate",
+        "caretaker",
+        "guard"
+      ]
+    },
+    "one_bottle": {
+      "activity": "share",
+      "roles": [
+        "graduate",
+        "stranded",
+        "hoarder"
+      ]
+    },
+    "court_crossing": {
+      "activity": "route",
+      "roles": [
+        "teammate",
+        "caretaker",
+        "guide"
+      ]
+    },
+    "whistle": {
+      "activity": "investigate",
+      "roles": [
+        "teammate",
+        "caretaker",
+        "mimic"
+      ],
+      "after": "17:48"
+    },
+    "door_cry": {
+      "activity": "investigate",
+      "roles": [
+        "worker",
+        "stranded",
+        "mimic"
+      ]
+    },
+    "last_water": {
+      "activity": "trade",
+      "roles": [
+        "worker",
+        "student",
+        "hoarder"
+      ]
+    },
+    "stranger_at_door": {
+      "activity": "shelter",
+      "roles": [
+        "resident",
+        "stranded",
+        "mimic"
+      ]
+    },
+    "stay_behind": {
+      "activity": "wait",
+      "roles": [
+        "resident",
+        "teammate",
+        "stranded"
+      ]
+    },
+    "brief_allies": {
+      "activity": "invite",
+      "roles": [
+        "resident",
+        "group",
+        "hoarder"
+      ]
+    },
+    "different_accounts": {
+      "activity": "verify",
+      "roles": [
+        "resident",
+        "guard",
+        "mimic"
+      ]
+    },
+    "knows_name": {
+      "activity": "investigate",
+      "roles": [
+        "resident",
+        "stranded",
+        "mimic"
+      ],
+      "after": "18:00"
+    },
+    "rest_place": {
+      "activity": "shelter",
+      "roles": [
+        "resident",
+        "hoarder",
+        "stranded"
+      ]
+    },
+    "appointment": {
+      "activity": "wait",
+      "roles": [
+        "resident",
+        "guide",
+        "stranded"
+      ],
+      "after": "17:46"
+    },
+    "missing_keeper": {
+      "activity": "information",
+      "roles": [
+        "resident",
+        "hoarder",
+        "guard"
+      ]
+    },
+    "lawn_guide": {
+      "activity": "verify",
+      "roles": [
+        "guide",
+        "student",
+        "mimic"
+      ],
+      "before": "18:15"
+    },
+    "lake_cry": {
+      "activity": "investigate",
+      "roles": [
+        "stranded",
+        "reader",
+        "mimic"
+      ]
+    },
+    "stormfront": {
+      "activity": "storm",
+      "roles": [
+        "student",
+        "caretaker"
+      ],
+      "after": "17:46"
+    },
+    "road_allies": {
+      "activity": "invite",
+      "roles": [
+        "guide",
+        "teammate",
+        "hoarder"
+      ],
+      "after": "17:44",
+      "before": "18:15"
+    },
+    "road_betrayal": {
+      "activity": "custody",
+      "roles": [
+        "hoarder",
+        "group",
+        "resident"
+      ]
+    },
+    "false_departure": {
+      "activity": "investigate",
+      "roles": [
+        "guard",
+        "guide",
+        "mimic"
+      ],
+      "after": "18:00"
+    },
+    "shift_register": {
+      "activity": "verify",
+      "roles": [
+        "aide",
+        "worker",
+        "mimic"
+      ]
+    },
+    "queue_for_help": {
+      "activity": "invite",
+      "roles": [
+        "worker",
+        "guide",
+        "hoarder"
+      ]
+    },
+    "test_signal": {
+      "activity": "light",
+      "roles": [
+        "graduate",
+        "caretaker",
+        "stranded"
+      ]
+    },
+    "two_doorways": {
+      "activity": "route",
+      "roles": [
+        "graduate",
+        "guide",
+        "mimic"
+      ]
+    },
+    "archived_voice": {
+      "activity": "investigate",
+      "roles": [
+        "reader",
+        "graduate",
+        "mimic"
+      ]
+    },
+    "borrowed_keycard": {
+      "activity": "information",
+      "roles": [
+        "worker",
+        "guard",
+        "hoarder"
+      ]
+    },
+    "ration_queue": {
+      "activity": "trade",
+      "roles": [
+        "worker",
+        "group",
+        "hoarder"
+      ]
+    },
+    "redacted_testimony": {
+      "activity": "verify",
+      "roles": [
+        "reader",
+        "aide",
+        "mimic"
+      ]
+    },
+    "library_refuge": {
+      "activity": "shelter",
+      "roles": [
+        "reader",
+        "resident",
+        "stranded"
+      ]
+    },
+    "empty_food_court": {
+      "activity": "wait",
+      "roles": [
+        "student",
+        "teammate",
+        "stranded"
+      ]
+    },
+    "blackboard_trace": {
+      "activity": "verify",
+      "roles": [
+        "student",
+        "aide",
+        "mimic"
+      ]
+    },
+    "return_cart": {
+      "activity": "recover",
+      "roles": [
+        "worker",
+        "reader",
+        "mimic"
+      ],
+      "reward": "cell"
+    },
+    "borrowed_blanket": {
+      "activity": "shelter",
+      "roles": [
+        "resident",
+        "stranded",
+        "hoarder"
+      ]
+    },
+    "lit_projector": {
+      "activity": "light",
+      "roles": [
+        "graduate",
+        "group",
+        "mimic"
+      ]
+    },
+    "emergency_drawer": {
+      "activity": "recover",
+      "roles": [
+        "worker",
+        "guard",
+        "mimic"
+      ],
+      "reward": "cell"
+    },
+    "bleacher_watch": {
+      "activity": "invite",
+      "roles": [
+        "stranded",
+        "teammate",
+        "hoarder"
+      ]
+    },
+    "pantry_latch": {
+      "activity": "recover",
+      "roles": [
+        "worker",
+        "guard",
+        "mimic"
+      ],
+      "reward": "food"
+    },
+    "double_knock": {
+      "activity": "verify",
+      "roles": [
+        "resident",
+        "guard",
+        "mimic"
+      ]
+    },
+    "dead_intercom": {
+      "activity": "warning",
+      "roles": [
+        "aide",
+        "guard",
+        "mimic"
+      ]
+    },
+    "forgotten_change": {
+      "activity": "share",
+      "roles": [
+        "worker",
+        "stranded",
+        "hoarder"
+      ]
+    },
+    "gate_runner": {
+      "activity": "invite",
+      "roles": [
+        "stranded",
+        "teammate",
+        "mimic"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "lawn_marker": {
+      "activity": "verify",
+      "roles": [
+        "guide",
+        "student",
+        "mimic"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "library_stairs": {
+      "activity": "recover",
+      "roles": [
+        "aide",
+        "worker",
+        "hoarder"
+      ],
+      "reward": "water",
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "clock_radio": {
+      "activity": "warning",
+      "roles": [
+        "guide",
+        "guard",
+        "mimic"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "bench_partner": {
+      "activity": "shelter",
+      "roles": [
+        "resident",
+        "stranded",
+        "hoarder"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "puddled_bag": {
+      "activity": "recover",
+      "roles": [
+        "graduate",
+        "worker",
+        "mimic"
+      ],
+      "reward": "food",
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "dormitory_cart": {
+      "activity": "custody",
+      "roles": [
+        "resident",
+        "teammate",
+        "hoarder"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "split_road": {
+      "activity": "information",
+      "roles": [
+        "guide",
+        "group",
+        "mimic"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "distant_signal": {
+      "activity": "warning",
+      "roles": [
+        "graduate",
+        "guard",
+        "mimic"
+      ],
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "service_case": {
+      "activity": "recover",
+      "roles": [
+        "worker",
+        "guard",
+        "hoarder"
+      ],
+      "reward": "cell",
+      "delay": [
+        0,
+        5
+      ]
+    },
+    "service_latch": {
+      "activity": "barricade",
+      "roles": [
+        "aide",
+        "guard",
+        "caretaker"
+      ]
+    },
+    "parts_radio": {
+      "activity": "divert",
+      "roles": [
+        "worker",
+        "guide",
+        "guard"
+      ]
+    },
+    "folded_kit": {
+      "activity": "kit",
+      "roles": [
+        "worker",
+        "resident",
+        "guard"
+      ]
+    },
+    "last_reader": {
+      "activity": "escort",
+      "roles": [
+        "reader",
+        "stranded",
+        "graduate"
+      ]
+    },
+    "night_latch": {
+      "activity": "barricade",
+      "roles": [
+        "resident",
+        "student",
+        "caretaker"
+      ]
+    },
+    "tray_alarm": {
+      "activity": "divert",
+      "roles": [
+        "worker",
+        "aide",
+        "guide"
+      ]
+    },
+    "injured_runner": {
+      "activity": "escort",
+      "roles": [
+        "teammate",
+        "student",
+        "stranded"
+      ]
+    },
+    "study_kit": {
+      "activity": "kit",
+      "roles": [
+        "student",
+        "aide",
+        "graduate"
+      ]
+    },
+    "lawn_ringing_cart": {
+      "activity": "divert",
+      "roles": [
+        "caretaker",
+        "worker",
+        "guide"
+      ],
+      "delay": [
+        0,
+        6
+      ]
+    },
+    "plaza_ration": {
+      "activity": "kit",
+      "roles": [
+        "worker",
+        "aide",
+        "guard"
+      ],
+      "delay": [
+        0,
+        6
+      ]
+    },
+    "shore_timer": {
+      "activity": "divert",
+      "roles": [
+        "guide",
+        "graduate",
+        "worker"
+      ],
+      "delay": [
+        0,
+        6
+      ]
+    },
+    "south_cache_note": {
+      "activity": "kit",
+      "roles": [
+        "resident",
+        "graduate",
+        "worker"
+      ],
+      "delay": [
+        0,
+        6
+      ]
+    }
+  },
+  "outdoor_clues": {
+    "trail_gate": [
+      140,
+      43
+    ],
+    "trail_lawn": [
+      125,
+      59
+    ],
+    "trail_library": [
+      110,
+      63
+    ],
+    "trail_clock": [
+      109,
+      72
+    ],
+    "trail_lake": [
+      95,
+      85
+    ],
+    "trail_residence": [
+      95,
+      99
+    ],
+    "trail_south_walk": [
+      103,
+      116
+    ],
+    "trail_engineering": [
+      134,
+      67
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "zombie.menu": "Zombie Chapter: Echoes of Success Lake",
+  "zombie.health": "Health",
+  "zombie.shelter": "West Shore Station",
+  "zombie.logbook": "Patrol Log Board",
+  "zombie.relay": "South Shore Beacon",
+  "zombie.objective.0": "Go to the West Shore Station at Success Lake",
+  "zombie.objective.1": "Head south along the lake and read the patrol log",
+  "zombie.objective.2": "Continue south and switch on the warning beacon",
+  "zombie.objective.3": "Return to the West Shore Station and report in",
+  "zombie.objective.4": "Echoes of Success Lake: chapter complete",
+  "zombie.story.0": "Station attendant: People on the lakeside keep walking the same route. Get close and they chase you. Check the patrol log to the south for a message from our missing patrol member. Back away when you see a red ring under a zombie. I'll wait here.",
+  "zombie.story.1": "Patrol note: Everyone else got out. The south shore is too dark for late arrivals to see the danger. Switch on the warning beacon so anyone who sees the red light knows to turn back.",
+  "zombie.story.2": "The red beacon turns on. Someone across the water flashes a torch twice. The patrol member saw the signal and is taking the outer road. Report back to the station so the attendant can pass on the route.",
+  "zombie.story.3": "Station attendant: The patrol member just checked in and is safe. We'll keep the beacon on and direct everyone to the outer road tonight. Some zombies are still around the lake, so keep your distance.",
+  "zombie.hit": "A zombie hit you for 20 health. Move away when you see the red ring!",
+  "zombie.rescued": "The attendant brought you back to the West Shore Station. Health restored and story progress kept."
+}

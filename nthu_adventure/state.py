@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from .constants import SAVE_VERSION, WORLD_WIDTH, WORLD_HEIGHT, LAYOUT_REVISION
 from .content import QUESTS, ZONES, SPAWN_TILE, tile_center
+from .zombie_story import FINISHED
+from .adventure import ENDING_ID, SIDE_KEYS, STOP_INDEX
 
 def default_quest_states():
     return {q["id"]:{"status":"available","progress":[]} for q in QUESTS}
@@ -28,6 +30,11 @@ class GameState:
     day: int = 1
     time_minutes: float = 8*60.0
     energy: float = 100
+    health: float = 100
+    zombie_stage: int = 0
+    adventure_step: str = "inactive"
+    adventure_sides: set[str] = field(default_factory=set)
+    adventure_ending: str | None = None
     supplies: dict = field(default_factory=lambda:{"water":3,"snack":2})
     photos: set[str] = field(default_factory=set)
     observations: set[str] = field(default_factory=set)
@@ -42,6 +49,11 @@ class GameState:
             "survival":{"hunger":self.hunger,"thirst":self.thirst,"difficulty":self.difficulty},
             "world_clock":{"day":self.day,"minutes":self.time_minutes},
             "energy":self.energy,"supplies":self.supplies,"inventory_selected":self.inventory_selected,
+            "zombie_chapter":{"stage":self.zombie_stage,"health":self.health},
+            "campus_adventure":{
+                "step":self.adventure_step,"sides":sorted(self.adventure_sides),
+                "ending":self.adventure_ending,
+            },
             "visited_zones":sorted(self.visited_zones),"talked_to":sorted(self.talked_to),
             "discovered_landmarks":sorted(self.discovered_landmarks),"quest_states":self.quest_states,
             "play_seconds":self.play_seconds,"active_quest":self.active_quest,
@@ -66,6 +78,16 @@ class GameState:
         s.thirst = max(0,min(100,float(survival.get("thirst",100))))
         s.difficulty = survival.get("difficulty","normal")
         s.energy = max(0,min(100,float(d.get("energy",100))))
+        chapter = d.get("zombie_chapter", {})
+        s.zombie_stage = max(0, min(FINISHED, int(chapter.get("stage", 0))))
+        s.health = max(1, min(100, float(chapter.get("health", 100))))
+        adventure = d.get("campus_adventure", {})
+        step = adventure.get("step", "inactive")
+        if step in STOP_INDEX or step in ("intro", "complete"):
+            s.adventure_step = step
+        s.adventure_sides = set(adventure.get("sides", [])) & set(SIDE_KEYS)
+        if s.adventure_step == "complete":
+            s.adventure_ending = adventure.get("ending") or ENDING_ID
         s.day = max(1,int(clock.get("day",1)))
         s.time_minutes = max(0,min(1439,float(clock.get("minutes",480))))
         s.play_seconds = max(0,float(d.get("play_seconds",0)))

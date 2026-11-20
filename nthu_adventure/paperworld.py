@@ -5,71 +5,155 @@ import random
 import pygame
 from .constants import ROOT, TILE, WORLD_WIDTH, WORLD_HEIGHT, INTERNAL_WIDTH, INTERNAL_HEIGHT
 from .content import BUILDINGS, DORMS, ARCHITECTURE, LANDSCAPES, SCENERY_POINTS, ROADS, WATERS, ISLANDS, WALKWAYS, LAKE_FEATURES, SPORTS_FIELDS, MAIN_GATE_TILE, NPCS, tile_center
-from .geometry import pixel_points, smooth_polygon, stroke, distance_to_path
-from .architecture import tsinghua_lab
+from .geometry import pixel_points, smooth_path, smooth_polygon, stroke, distance_to_path
+from .architecture import tsinghua_lab, life_science_2
+from .character_art import figure
 
 ASSETS = ROOT / "assets" / "painted"
 INK = (48, 58, 54)
 PAPER = (245, 242, 230)
 SAGE = (98, 125, 111)
-HAIR = [(56,45,39),(34,37,38),(115,78,51),(91,57,69),(180,149,101)]
-SHIRTS = [(89,121,117),(114,101,126),(149,100,83),(87,113,143),(170,142,93),(104,131,100)]
-SKIN = [(235,204,174),(213,179,145),(179,139,105),(115,83,65)]
-
 def load_image(name):
     return pygame.image.load(str(ASSETS / name)).convert_alpha()
 
 def crop_cell(sheet, col, row, columns=2, rows=2):
-    w,h=sheet.get_width()//columns,sheet.get_height()//rows
-    cell=sheet.subsurface((col*w,row*h,w,h)).copy()
+    w, h = sheet.get_width() // columns, sheet.get_height() // rows
+    cell = sheet.subsurface((col*w, row*h, w, h)).copy()
     return cell.subsurface(cell.get_bounding_rect(min_alpha=80)).copy()
+
 
 class Characters:
     def __init__(self):
-        sheet=load_image("student-walk-v5.png")
-        self.frames=[]; self.cache={}
-        for row in range(4):
-            self.frames.append([])
-            for col in range(4):
-                cell=crop_cell(sheet,col,row,4,4)
-                h=64; w=max(18,round(cell.get_width()/cell.get_height()*h))
-                self.frames[row].append(pygame.transform.smoothscale(cell,(w,h)))
+        self.cache = {}
+        self.zombie_frames = {}
+        self.shadow = pygame.Surface((40, 12), pygame.SRCALPHA)
+        pygame.draw.ellipse(self.shadow, (27, 35, 32, 70), self.shadow.get_rect())
+        bike_sheet=load_image("cyclists_spaced(1).png")
+        frame_width=bike_sheet.get_width()//5
+        frame_height=bike_sheet.get_height()//2
+        self.bike_right=[]; self.bike_left=[]
+        for col in range(5):
+            for row,frames in ((0,self.bike_right),(1,self.bike_left)):
+                cell=bike_sheet.subsurface((col*frame_width,row*frame_height,frame_width,frame_height)).copy()
+                cell=cell.subsurface(cell.get_bounding_rect(min_alpha=80)).copy()
+                frames.append(pygame.transform.smoothscale(cell,(68,74)))
 
-    def sprite(self,facing,frame,appearance):
-        row={"down":0,"left":1,"right":2,"up":3}.get(facing,0)
-        key=(row,frame,tuple(sorted(appearance.items())))
+    def sprite(self, facing, frame, appearance, *, preview=False):
+        key = (facing, frame, preview, tuple(sorted(appearance.items())))
         if key not in self.cache:
-            sprite=self.frames[row][frame].copy()
-            # The authored left-row poses face right; reflect them consistently.
-            if facing=="left": sprite=pygame.transform.flip(sprite,True,False)
-            shirt=SHIRTS[appearance.get("shirt",0)%6]
-            hair=HAIR[appearance.get("hair_color",0)%5]
-            skin=SKIN[appearance.get("skin",1)%4]
-            for y in range(sprite.get_height()):
-                for x in range(sprite.get_width()):
-                    r,g,b,a=sprite.get_at((x,y))
-                    if a<80: continue
-                    target=None
-                    if y<12 and max(r,g,b)<135: target=hair
-                    elif 13<y<39 and g>r*1.03 and b>r and max(r,g,b)<175: target=shirt
-                    elif y<37 and r>145 and r>g*1.08 and g>b*1.08: target=skin
-                    if target:
-                        light=max(0.45,min(1.3,(r+g+b)/330))
-                        sprite.set_at((x,y),(*[min(255,round(v*light)) for v in target],a))
-            style=appearance.get("hair_style",0)%4
-            if style in (1,3): pygame.draw.ellipse(sprite,hair,(sprite.get_width()//2+4,4,4,10))
-            if style==2: pygame.draw.ellipse(sprite,hair,(sprite.get_width()//2-5,0,9,6))
-            self.cache[key]=sprite
+            source = figure(facing, frame, appearance)
+            size = (135, 203) if preview else (45, 68)
+            self.cache[key] = pygame.transform.smoothscale(source, size)
         return self.cache[key]
 
-    def draw(self,target,position,facing,moving,appearance,tick,scale=1):
-        sprite=self.sprite(facing,int(tick//150)%4 if moving else 0,appearance)
-        if scale!=1: sprite=pygame.transform.smoothscale(sprite,(round(sprite.get_width()*scale),round(sprite.get_height()*scale)))
-        x,y=map(round,position)
-        shadow=pygame.Surface((36,10),pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow,(35,49,40,42),shadow.get_rect())
-        target.blit(shadow,(x-18,y-5))
-        target.blit(sprite,(x-sprite.get_width()//2,y-sprite.get_height()))
+    def draw(self, target, position, facing, moving, appearance, tick, scale=1, *, running=False, stride=None):
+        cadence = 73 if running else 106
+        motion = int(stride / 7) if stride is not None else tick // cadence
+        frame = 1 + motion % 8 if moving else 0
+        sprite = self.sprite(facing, frame, appearance)
+        if scale != 1:
+            sprite = pygame.transform.smoothscale(sprite, (round(sprite.get_width()*scale), round(sprite.get_height()*scale)))
+        x, y = map(round, position)
+        target.blit(self.shadow, self.shadow.get_rect(center=(x, y)))
+        target.blit(sprite, sprite.get_rect(midbottom=(x, y)))
+
+    def draw_bike(self, target, position, facing, moving, tick, appearance=None):
+        if appearance is None:
+            frames = self.bike_right if facing == "right" else self.bike_left
+            sprite = frames[tick // 150 % len(frames) if moving else 0]
+            target.blit(sprite, sprite.get_rect(midbottom=position))
+            return
+        x, y = map(round, position)
+        direction = 1 if facing == "right" else -1
+        rear, front = (x-21*direction, y-13), (x+23*direction, y-13)
+        crank, saddle = (x+1*direction, y-12), (x-8*direction, y-31)
+        handle = (x+18*direction, y-35)
+        for wheel in (rear, front):
+            pygame.draw.circle(target, (34, 44, 42), wheel, 12, 3)
+            pygame.draw.circle(target, (115, 130, 121), wheel, 9, 1)
+            angle = tick * .012 if moving else .3
+            for phase in (angle, angle + math.pi / 2):
+                dx, dy = round(math.cos(phase) * 8), round(math.sin(phase) * 8)
+                pygame.draw.aaline(target, (117, 134, 127),
+                                   (wheel[0]-dx, wheel[1]-dy), (wheel[0]+dx, wheel[1]+dy))
+        pygame.draw.lines(target, (146, 106, 69), False, (rear, saddle, crank, rear), 3)
+        pygame.draw.lines(target, (146, 106, 69), False, (crank, handle, front), 3)
+        sprite = self.sprite(facing, tick // 145 % 4 if moving else 0, appearance)
+        rider = pygame.transform.smoothscale(sprite, (sprite.get_width(), 49))
+        target.blit(rider, rider.get_rect(midbottom=(x-2*direction, y-17)))
+        pygame.draw.line(target, (42, 57, 53), handle, (handle[0]+6*direction, handle[1]), 3)
+
+    def zombie_sprite(self, variant, facing, frame, windup):
+        proportions = {
+            "wanderer": (.91, 1.02, (121, 137, 105), 1, 1),
+            "hunter": (1.12, 1.06, (152, 106, 83), 2, 1),
+            "caller": (.84, 1.20, (154, 138, 93), 4, 1),
+            "mimic": (.96, 1.03, (137, 141, 150), 3, 3),
+            "armored": (1.39, 1.09, (104, 135, 126), 5, 1),
+            "crawler": (1.66, .61, (137, 104, 143), 3, 1),
+            "brute": (1.77, 1.32, (121, 104, 97), 2, 1),
+        }
+        sx, sy, tint, shirt, hair = proportions.get(variant, proportions["wanderer"])
+        base = self.sprite(facing, frame, {"shirt": shirt, "hair_color": hair})
+        width, height = base.get_size()
+        sprite = pygame.Surface((width + 24, height + 3), pygame.SRCALPHA)
+        center = sprite.get_width() // 2
+        edge = -1 if facing == "left" else 1
+        color = (65, 68, 61)
+        if variant == "crawler":
+            for side in (-1, 1):
+                pygame.draw.lines(sprite, color, False, ((center + side*6, 30),
+                                  (center + side*15, 41), (center + side*19, 59-frame%2*6)), 5)
+                pygame.draw.line(sprite, tint, (center + side*15, 41), (center + side*19, 59-frame%2*6), 2)
+        elif variant in ("brute", "armored"):
+            for side in (-1, 1):
+                extra = 6 if variant == "brute" and side == 1 else 0
+                pygame.draw.polygon(sprite, color, ((center+side*4, 20-extra), (center+side*12, 17-extra),
+                                    (center+side*17, 26), (center+side*12, 40), (center+side*5, 33)))
+                pygame.draw.line(sprite, tint, (center+side*12, 20-extra), (center+side*15, 28), 3)
+        sprite.blit(base, (12, 0))
+        strength = .31 if variant == "mimic" else .61
+        for y in range(sprite.get_height()):
+            for x in range(sprite.get_width()):
+                red, green, blue, alpha = sprite.get_at((x, y))
+                if alpha:
+                    shade = (red + green + blue) / 390
+                    rgb = tuple(round(min(255, v * (1-strength) + tone * shade * strength))
+                                for v, tone in zip((red, green, blue), tint))
+                    sprite.set_at((x, y), (*rgb, alpha))
+        if variant == "hunter":
+            elbow = (center + 13*edge, 33)
+            pygame.draw.lines(sprite, (82, 73, 57), False, ((center + 4*edge, 22), elbow,
+                              (center + (14 + frame)*edge, 40)), 4)
+        if variant == "caller":
+            pygame.draw.arc(sprite, (176, 128, 76), (center-5, 13, 11, 12), math.pi, math.tau, 2)
+        elif variant in ("brute", "crawler", "armored"):
+            for i in range(3):
+                pygame.draw.line(sprite, tint, (center+2+i, 27+i*4), (center+8-i, 23+i*5), 2)
+        if facing != "up":
+            injury = (93, 44, 56) if variant == "mimic" else (124, 52, 62)
+            pygame.draw.lines(sprite, injury, False, ((center+1, 8), (center-1, 13), (center+3, 18)), 2)
+        sprite = sprite.subsurface(sprite.get_bounding_rect()).copy()
+        sprite = pygame.transform.smoothscale(sprite, (round(sprite.get_width()*sx), round(sprite.get_height()*sy)))
+        stride_tilt = (-2, 4, 1, -5)[frame]
+        lean = {"hunter": 9, "caller": -5, "crawler": 8, "mimic": 0, "brute": 3}.get(variant, 2)
+        return pygame.transform.rotozoom(sprite, edge * (-14 if windup else stride_tilt - lean), 1)
+
+    def draw_zombie(self, target, position, enemy, tick):
+        variant = getattr(enemy, "kind", "wanderer")
+        cadence = {"hunter": 126, "crawler": 111, "brute": 254, "mimic": 158}.get(variant, 212)
+        frame = tick // cadence % 4 if enemy.moving else 0
+        key = (variant, enemy.facing, frame, bool(enemy.windup))
+        if key not in self.zombie_frames:
+            self.zombie_frames[key] = self.zombie_sprite(*key)
+        sprite = self.zombie_frames[key]
+        x, y = map(round, position)
+        target.blit(self.shadow, self.shadow.get_rect(center=(x, y)))
+        if enemy.chasing or enemy.windup:
+            ring = (219, 106, 79) if enemy.windup else (142, 103, 76)
+            pygame.draw.ellipse(target, ring, (x - 22, y - 6, 44, 13), 2)
+        target.blit(sprite, sprite.get_rect(midbottom=(x, y)))
+
 
 class PaperWorld:
     def __init__(self):
@@ -85,7 +169,14 @@ class PaperWorld:
         for _,points in self.water_shapes: pygame.draw.polygon(water,(255,255,255),points)
         for _,points in self.island_shapes: pygame.draw.polygon(water,(0,0,0),points)
         for spec,points in self.paths:
-            if spec in WALKWAYS: stroke(water,(0,0,0),points,spec['width']*TILE)
+            if spec in WALKWAYS:
+                stroke(
+                    water,
+                    (0,0,0),
+                    smooth_path(points, closed=spec.get('closed',False)),
+                    spec['width']*TILE,
+                    closed=spec.get('closed',False),
+                )
         for feature in LAKE_FEATURES:
             if feature['kind']=='pier':
                 x,y=feature['tile']; pygame.draw.rect(water,(0,0,0),(x*TILE-22,y*TILE-16,65,32))
@@ -116,6 +207,9 @@ class PaperWorld:
             if spec.get('renderer')=='tsinghua_lab':
                 self.facades[key]=tsinghua_lab()
                 continue
+            if spec.get('renderer')=='life_science_2':
+                self.facades[key]=life_science_2()
+                continue
             if spec['art'] not in atlases: atlases[spec['art']]=load_image(spec['art'])
             sheet=atlases[spec['art']]; w,h=sheet.get_size()
             x,y,cw,ch=spec['crop']
@@ -125,8 +219,7 @@ class PaperWorld:
         if missing: raise ValueError(f'Missing photo-referenced building facades: {sorted(missing)}')
         tree_sheet=load_image("trees-v5.png")
         self.tree_images=[crop_cell(tree_sheet,i%2,i//2) for i in range(4)]
-        room_sheet=load_image("room-plans-v5.png")
-        self.rooms=[room_sheet.subsurface((i%2*room_sheet.get_width()//2,i//2*room_sheet.get_height()//2,room_sheet.get_width()//2,room_sheet.get_height()//2)).copy() for i in range(4)]
+        self.rooms=None
         materials=load_image("ground-materials-v5.png")
         self.materials=[pygame.transform.smoothscale(crop_cell(materials,i%2,i//2),(256,256)) for i in range(4)]
         self.ground=pygame.Surface((WORLD_WIDTH,WORLD_HEIGHT))
@@ -140,16 +233,22 @@ class PaperWorld:
             for x in range(0,WORLD_WIDTH,256):
                 self.ground.blit(pygame.transform.rotate(self.materials[0],rng.choice((0,90,180,270))),(x,y))
         self._landscapes(rng)
+
+        # Draw all roads (fill only)
         for spec,points in self.paths:
-            if spec in ROADS: self._paint_path(points,spec['width']*TILE,rng)
+            if spec in ROADS: self._paint_path(points,spec['width']*TILE,rng,mode='fill',closed=spec.get('closed',False))
+
         for _,points in self.water_shapes:
             self._paint_water(points,rng)
         for _,points in self.island_shapes:
             pygame.draw.polygon(self.ground,(164,166,129),points)
             pygame.draw.lines(self.ground,(124,145,120),True,points,5)
+
+        # Draw all walkways (fill only)
         for spec,points in self.paths:
             if spec in WALKWAYS:
-                self._paint_path(points,spec['width']*TILE,rng,spec.get('bridge',False))
+                self._paint_path(points,spec['width']*TILE,rng,spec.get('bridge',False),mode='fill',closed=spec.get('closed',False))
+
         for island in ISLANDS:
             if island.get('pavilion'): self._pavilion(pixel_points([island['center']])[0],21)
         for feature in LAKE_FEATURES: self._lake_feature(feature,rng)
@@ -226,34 +325,35 @@ class PaperWorld:
         pygame.draw.ellipse(self.ground,(193,191,167),(fx-26,fy-9,52,22))
         pygame.draw.line(self.ground,(117,125,113),(fx,fy),(fx,fy-97),3)
         pygame.draw.polygon(self.ground,(126,97,109),[(fx+2,fy-97),(fx+35,fy-93),(fx+28,fy-76),(fx+2,fy-80)])
-        cx,cy=120*TILE,67*TILE
+        cx,cy=107*TILE,71*TILE
         pygame.draw.polygon(self.ground,(145,153,131),[(cx-18,cy+7),(cx+18,cy+7),(cx+7,cy-39),(cx-7,cy-39)])
         pygame.draw.circle(self.ground,(224,221,197),(cx,cy-39),15)
         pygame.draw.circle(self.ground,(104,119,103),(cx,cy-39),15,2)
         pygame.draw.line(self.ground,(72,91,76),(cx,cy-39),(cx,cy-48),2)
         pygame.draw.line(self.ground,(72,91,76),(cx,cy-39),(cx+7,cy-36),2)
 
-    def _paint_path(self,points,width,rng,wood=False):
-        edge=(126,127,108) if wood else (145,155,127)
+    def _paint_path(self,points,width,rng,wood=False,mode='both',closed=False):
         color=(169,143,110) if wood else (207,200,178)
-        stroke(self.ground,edge,points,width+8)
-        stroke(self.ground,color,points,width)
-        for a,b in zip(points,points[1:]):
-            segment=b-a
-            if not segment.length_squared(): continue
-            tangent=segment.normalize(); normal=pygame.Vector2(-tangent.y,tangent.x)
-            for step in range(0,round(segment.length()),10 if wood else 22):
-                center=a+tangent*step
-                extent=width*.45 if wood else rng.uniform(.15,.42)*width
-                shade=(130,112,89) if wood else (191+rng.randrange(10),188,168)
-                pygame.draw.aaline(self.ground,shade,center-normal*extent,center+normal*extent)
-            if wood:
-                for side in (-1,1):
-                    rail_a,rail_b=a+normal*(width/2+2)*side,b+normal*(width/2+2)*side
-                    pygame.draw.line(self.ground,(102,111,94),rail_a,rail_b,3)
-                    for step in range(0,round(segment.length()),36):
-                        point=rail_a+tangent*step
-                        pygame.draw.line(self.ground,(93,104,88),point,point+(0,-9),3)
+        points=smooth_path(points,closed=closed)
+        # Borderless rendering: Ignore edge mode, only draw fill.
+        if mode in ('fill', 'both'):
+            stroke(self.ground,color,points,width,end_caps=not closed,closed=closed)
+            for a,b in zip(points,points[1:]):
+                segment=b-a
+                if not segment.length_squared(): continue
+                tangent=segment.normalize(); normal=pygame.Vector2(-tangent.y,tangent.x)
+                for step in range(0,round(segment.length()),10 if wood else 22):
+                    center=a+tangent*step
+                    extent=width*.45 if wood else rng.uniform(.15,.42)*width
+                    shade=(130,112,89) if wood else (191+rng.randrange(10),188,168)
+                    pygame.draw.aaline(self.ground,shade,center-normal*extent,center+normal*extent)
+                if wood:
+                    for side in (-1,1):
+                        rail_a,rail_b=a+normal*(width/2+2)*side,b+normal*(width/2+2)*side
+                        pygame.draw.line(self.ground,(102,111,94),rail_a,rail_b,3)
+                        for step in range(0,round(segment.length()),36):
+                            point=rail_a+tangent*step
+                            pygame.draw.line(self.ground,(93,104,88),point,point+(0,-9),3)
 
     def _paint_water(self,points,rng):
         rect=pygame.Rect(min(x for x,y in points),min(y for x,y in points),1,1)
@@ -339,7 +439,7 @@ class PaperWorld:
     def camera_for(self,x,y):
         return pygame.Rect(max(0,min(WORLD_WIDTH-INTERNAL_WIDTH,round(x-INTERNAL_WIDTH/2))),max(0,min(WORLD_HEIGHT-INTERNAL_HEIGHT,round(y-INTERNAL_HEIGHT/2))),INTERNAL_WIDTH,INTERNAL_HEIGHT)
 
-    def draw_view(self,target,camera,actors,state,moving,tick):
+    def draw_view(self,target,camera,actors,state,moving,tick,riding_bike=False,enemies=(),survivors=()):
         target.blit(self.ground,(0,0),camera)
         layers=[]
         for x,y,image in self.trees:
@@ -347,17 +447,35 @@ class PaperWorld:
         for actor in actors:
             x,y=tile_center(actor["tile"])
             if camera.inflate(100,100).collidepoint(x,y): layers.append((y,"npc",actor))
+        for actor in survivors:
+            if camera.inflate(100,100).collidepoint(actor.position):
+                layers.append((actor.position[1],"survivor",actor))
+        for enemy in enemies:
+            if camera.inflate(160,160).collidepoint(enemy.position):
+                layers.append((enemy.position[1],"zombie",enemy))
         layers.append((state.player_y,"player",None))
         for _,kind,value in sorted(layers,key=lambda v:v[0]):
             if kind=="tree":
                 x,y,image=value
                 target.blit(image,(x-camera.x-image.get_width()/2,y-camera.y-image.get_height()+12))
+            elif kind=="zombie":
+                self.characters.draw_zombie(target,pygame.Vector2(value.position)-pygame.Vector2(camera.topleft),value,tick)
             else:
                 if kind=="player": x,y=state.player_x,state.player_y; appearance=state.appearance; facing=state.facing
+                elif kind=="survivor":
+                    x,y=value.position; identity=getattr(value,"identity",-1)
+                    n=identity+17 if identity>=0 else sum(map(ord,value.kind))
+                    appearance={"shirt":n%6,"hair_color":n%5,"skin":n%4,"hair_style":n%4,"gender":n%2}; facing=value.facing
                 else:
                     x,y=tile_center(value["tile"]); n=sum(map(ord,value["id"]))
                     appearance={"shirt":n%6,"hair_color":n%5,"skin":n%4,"hair_style":n%4}; facing="down"
-                self.characters.draw(target,(x-camera.x,y-camera.y),facing,moving if kind=="player" else False,appearance,tick)
+                if kind=="player" and riding_bike:
+                    bike_facing=facing if facing in ("left","right") else "right"
+                    self.characters.draw_bike(target,(x-camera.x,y-camera.y),bike_facing,moving,tick,appearance)
+                else:
+                    self.characters.draw(target,(x-camera.x,y-camera.y),facing,moving if kind=="player" else value.moving if kind=="survivor" else False,appearance,tick,
+                                         running=kind=="player" and getattr(state, "running", False),
+                                         stride=getattr(value, "stride", None) if kind=="survivor" else None)
         # Sparse restrained ripple motion, not floating pickup sparkles.
         for spec,points in self.water_shapes:
             water=pygame.Rect(min(x for x,y in points),min(y for x,y in points),1,1)
@@ -371,6 +489,10 @@ class PaperWorld:
                     pygame.draw.aaline(target,(153,183,177),(x-camera.x,y-camera.y),(x-camera.x+12,y-camera.y))
 
     def room_image(self,building,size):
+        if self.rooms is None:
+            room_sheet=load_image("room-plans-v5.png")
+            w,h=room_sheet.get_width()//2,room_sheet.get_height()//2
+            self.rooms=[room_sheet.subsurface((i%2*w,i//2*h,w,h)).copy() for i in range(4)]
         style=building.get("style","")
         index=0 if building["id"] in DORMS else 1 if "library" in building["id"] else 2 if style in ("dining","activity") else 3
         return pygame.transform.smoothscale(self.rooms[index],size)

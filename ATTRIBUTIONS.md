@@ -17,7 +17,7 @@ The following NTHU Student Housing Division pages and their official exterior ph
 
 ## Art and code
 
-The fourteen images in `assets/painted/` were produced for this project with OpenAI's built-in image generation tool. Prompts requested non-pixel ink/watercolor, matte materials and architectural elevations. See `assets/ART_DIRECTION_V5.md`, `assets/ART_DIRECTION_V6.md` and `assets/ART_DIRECTION_V7.md` for paths and specifications. Runtime animation, colors, facade assembly, navigation, tasks, interface and original synthesized sound cues are implemented in Python. Some cutouts retain shallow side views; the game uses 2D surfaces, without a 3D scene or models.
+The scenery and architecture assets in assets/painted/ were produced for this project with OpenAI image generation and assembled for the game in Python. The current player and NPC illustrations are drawn from original vector shapes in Python. Navigation, animation, events, and interface also run on Python 2D surfaces. The score and non-verbal effects are original synthesized audio.
 
 ## Campus Green, north gate and individual buildings (v7)
 

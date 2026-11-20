@@ -6,7 +6,7 @@ $AssetsPath = Join-Path $ProjectRoot "assets"
 
 Set-Location -LiteralPath $ProjectRoot
 python -m PyInstaller --noconfirm --clean --onefile --windowed `
-  --name "NTHUWalk2D" `
+  --name "NTHULastReport" `
   --add-data "$DataPath;data" `
   --add-data "$AssetsPath;assets" `
   --distpath $OutputPath `
@@ -18,4 +18,4 @@ if ($LASTEXITCODE -ne 0) {
   throw "PyInstaller failed with exit code $LASTEXITCODE"
 }
 
-Write-Host "Built: $OutputPath\NTHUWalk2D.exe"
+Write-Host "Built: $OutputPath\NTHULastReport.exe"
