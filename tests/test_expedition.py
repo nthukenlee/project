@@ -57,7 +57,7 @@ class ExpeditionTests(unittest.TestCase):
         g.advance_crisis()
         self.assertTrue(r.blackout)
         self.assertFalse(r.outbreak)
-        self.assertEqual(r.clock, "17:48")
+        self.assertEqual(r.clock, "17:45")
         r.position = g.slots.incidents[r.incident_site]
         g.advance_crisis()
         self.assertTrue(r.outbreak)

@@ -87,8 +87,8 @@ NAMES = (
     ("品珊", "Pin-Shan", "female"), ("宇捷", "Yu-Chieh", "male"), ("宥真", "You-Chen", "female"),
     ("逸翔", "Yi-Hsiang", "male"), ("秉文", "Ping-Wen", "male"),
 )
-STOP_MINUTE = 17 * 60 + 48
-SIGNAL_MINUTE = 17 * 60 + 51
+STOP_MINUTE = 17 * 60 + 45
+SIGNAL_MINUTE = 17 * 60 + 47
 DARK_MINUTE = 18 * 60
 START_MINUTE = 17 * 60 + 42
 MINUTE_SECONDS = 9

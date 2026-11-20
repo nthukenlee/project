@@ -215,7 +215,7 @@
   "survival.route.place.clock": "Triangle Clock junction",
   "survival.route.place.plaza": "Academic plaza",
   "survival.route.target": "Story location",
-  "survival.route.outbreak": "People are being bitten. With phones down, press Q to find the staff's emergency information.",
+  "survival.route.outbreak": "The outbreak has begun! Check the map for how to play. Press M to open it.",
   "survival.fixture.manifest": "Inspect the temporary evacuation roster",
   "survival.fixture.echo_log": "Compare voices on the portable recorder",
   "survival.fixture.lock_log": "Read the final check-in record",

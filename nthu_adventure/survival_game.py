@@ -11,7 +11,7 @@ import pygame
 from pygame import Vector2
 
 from .audio import AudioManager
-from .constants import FPS, WINDOW_SIZE, WORLD_HEIGHT, WORLD_WIDTH
+from .constants import FPS, TILE, WINDOW_SIZE, WORLD_HEIGHT, WORLD_WIDTH
 from .encounter_flow import EncounterFlow
 from .expedition import MAIN_STEPS, MINUTE_SECONDS, SIGNAL_MINUTE, STOP_MINUTE, STORY_STEPS
 from .interiors import create_rooms
@@ -119,6 +119,7 @@ class Game:
         self.moving = self.running = False
         self.toast = ""
         self.toast_until = self.autosave_at = self.bat_at = 0
+        self.persistent_hint = ""
         self.card = ()
         self.card_values = {}
         self.card_speaker = self.card_quote = ""
@@ -127,6 +128,7 @@ class Game:
         self.pursuit_until = 0
         self.options = ()
         self.map_zoom = False
+        self.debug_grid = False
 
     def tr(self, key, **values):
         return self.localizer.t("survival." + key, **values)
@@ -214,6 +216,8 @@ class Game:
         self.moving = self.running = False
         self.toast_until = 0
         self.incident_time = self.outbreak_cue_until = self.event_page = 0
+        self.toast = ""
+        self.persistent_hint = ""
         self.pursuit_until = 0
         self.store.save(self.run_state)
         self.focus_name(False)
@@ -240,7 +244,13 @@ class Game:
         self.store.save(self.run_state)
 
     def notify(self, key, **values):
-        self.toast = self.tr(key, **values)
+        message = self.tr(key, **values)
+        if key == "route.outbreak":
+            self.persistent_hint = message
+            self.toast = ""
+            self.toast_until = 0
+            return
+        self.toast = message
         self.toast_until = pygame.time.get_ticks() + 2800
 
     def event(self, event, mouse):
@@ -277,6 +287,9 @@ class Game:
 
     def key(self, key, modifiers=0):
         scene = self.scene
+        if key == pygame.K_F3:
+            self.debug_grid = not self.debug_grid
+            return
         if key == pygame.K_F11:
             self.set_fullscreen(not self.fullscreen)
             return
@@ -297,6 +310,10 @@ class Game:
             elif key == pygame.K_b:
                 self.use(GEAR.index("bike"))
             elif key in (pygame.K_q, pygame.K_m, pygame.K_ESCAPE):
+                if key == pygame.K_m and self.persistent_hint:
+                    self.toast = ""
+                    self.persistent_hint = ""
+                    self.toast_until = 0
                 self.scene = {pygame.K_q: "journal", pygame.K_m: "map", pygame.K_ESCAPE: "pause"}[key]
         elif scene == "card":
             if key in QUICK_KEYS and QUICK_KEYS.index(key) < len(self.options):
@@ -976,6 +993,23 @@ class Game:
         self.lines(self.tr("exp.incident_text"), (67, 619), 19, 880)
         self.button_key((1018, 632, 190, 40), "skip", "skip_incident", mouse)
 
+    def draw_coordinate_grid(self, camera):
+        start_x = (camera.left // TILE) * TILE
+        start_y = (camera.top // TILE) * TILE
+        grid_color = (180, 190, 177, 105)
+        grid = pygame.Surface(WINDOW_SIZE, pygame.SRCALPHA)
+        for x in range(start_x, camera.right + TILE, TILE):
+            pygame.draw.line(grid, grid_color, (x - camera.left, 0), (x - camera.left, WINDOW_SIZE[1]), 1)
+            tile_x = x // TILE
+            if tile_x % 5 == 0:
+                self.words(str(tile_x), (x - camera.left + 2, 2), 12, (230, 120, 100), True)
+        for y in range(start_y, camera.bottom + TILE, TILE):
+            pygame.draw.line(grid, grid_color, (0, y - camera.top), (WINDOW_SIZE[0], y - camera.top), 1)
+            tile_y = y // TILE
+            if tile_y % 5 == 0:
+                self.words(str(tile_y), (2, y - camera.top + 2), 12, (230, 120, 100), True)
+        self.canvas.blit(grid, (0, 0))
+
     def draw_play(self, mouse, hud):
         state = self.run_state
         tick = pygame.time.get_ticks()
@@ -993,6 +1027,8 @@ class Game:
                 if SIZE.collidepoint(x,y):
                     self.enemy_mark(enemy, (x,y))
             self.weather_fx(state.weather, state.night, Vector2(state.position)-offset, state.lamp_on, tick, blackout=True)
+            if self.debug_grid:
+                self.draw_coordinate_grid(camera)
         else:
             offset = Vector2()
             room = self.rooms[state.area]
@@ -1180,9 +1216,13 @@ class Game:
                 if actor.status == "bitten":
                     label += f"  ·  {self.tr('ui.infected')} {math.ceil(actor.infection)}"
                 self.words(label, (1025, 101+25*i), 15, RED if actor.status=="bitten" else PAPER)
-        if pygame.time.get_ticks() < self.toast_until:
+        if self.persistent_hint:
             self.panel((368, 20, 544, 38), INK)
-            self.words(self.toast, (640, 39), 17, PAPER, False, "center")
+            self.words(self.persistent_hint, (640, 39), 17, PAPER, False, "center")
+        if self.toast and pygame.time.get_ticks() < self.toast_until:
+            top = 63 if self.persistent_hint else 20
+            self.panel((368, top, 544, 38), INK)
+            self.words(self.toast, (640, top + 19), 17, PAPER, False, "center")
         self.panel((310, 622, 660, 94), INK)
         for i, item in enumerate(GEAR):
             rect = pygame.Rect(318+107*i, 631, 101, 57)
