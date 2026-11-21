@@ -370,6 +370,7 @@
   "survival.fixture.search_drawer": "翻找抽屜",
   "survival.fixture.search_shelf": "翻找層架",
   "survival.fixture.search_cabinet": "翻找收納櫃",
+  "survival.fixture.search_ground": "撿起地上的球棒",
   "survival.event.empty_container": "裡面已經空了。",
   "survival.exp.mimic_nearby": "轉角又傳來同一句求救。",
   "survival.infected.wanderer": "遊蕩型",

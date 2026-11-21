@@ -147,6 +147,7 @@
   "survival.event.betrayal": "Ting ran off with the water you gave him.",
   "survival.event.found": "Found: {item}",
   "survival.event.empty": "Nothing in this slot.",
+  "survival.event.empty_bat": "Nothing in this slot. Consider where the bat should appear. Check the map.",
   "survival.event.full": "You don't need to replenish this yet.",
   "survival.event.empty_battery": "The flashlight is out of power.",
   "survival.event.no_charge": "You need a flashlight with less than 85% charge.",

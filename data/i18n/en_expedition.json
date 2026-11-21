@@ -370,6 +370,7 @@
   "survival.fixture.search_drawer": "Search the drawer",
   "survival.fixture.search_shelf": "Search the shelf",
   "survival.fixture.search_cabinet": "Search the cabinet",
+  "survival.fixture.search_ground": "Pick up the baseball bat",
   "survival.event.empty_container": "The container is empty.",
   "survival.exp.mimic_nearby": "The same call for help repeats around the corner.",
   "survival.infected.wanderer": "Wanderer",

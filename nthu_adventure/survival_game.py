@@ -555,7 +555,7 @@ class Game:
             self.sound("bat")
         else:
             self.sound("select")
-        self.notify("event." + feedback)
+        self.notify("event.empty_bat" if item == "bat" and feedback == "empty" else "event." + feedback)
 
     def fixture_is_available(self, key):
         state = self.run_state
@@ -1063,7 +1063,11 @@ class Game:
                 continue
             if outdoor and not self.lit_at(point):
                 continue
-            if key in STORY_STEPS:
+            if kind == "cache":
+                cache = next((cache for cache in state.caches if cache.id == key), None)
+                if cache and cache.item == "bat":
+                    pygame.draw.line(self.canvas, GOLD, position+(8,-10), position+(-8,10), 5)
+            elif key in STORY_STEPS:
                 x, y = round(position.x), round(position.y)
                 pygame.draw.polygon(self.canvas, INK, ((x,y-11),(x+11,y),(x,y+11),(x-11,y)))
                 pygame.draw.polygon(self.canvas, GOLD, ((x,y-10),(x+10,y),(x,y+10),(x-10,y)), 2)
@@ -1077,7 +1081,9 @@ class Game:
             self.words(label, (640, 593), 19, GOLD, True, "center")
         if pygame.time.get_ticks() < self.bat_at and (not outdoor or self.lit_at(state.position)):
             factor = 1-((self.bat_at-pygame.time.get_ticks())/450)
-            direction = Vector2(FACING[state.facing]).rotate(-55+110*factor)
+            frame = min(4, int(factor*5))
+            angle = (-55, -27, 0, 28, 55)[frame]
+            direction = Vector2(FACING[state.facing]).rotate(angle)
             start = Vector2(state.position)-offset+(0,-15)
             pygame.draw.line(self.canvas, GOLD, start+direction*22, start+direction*57, 5)
         if self.scare_time > 0 and self.profile.scares:
@@ -1129,6 +1135,12 @@ class Game:
         x, y = map(round, point)
         color = KINDS.get(enemy.kind, KINDS["wanderer"])[-1]
         height = {"crawler": 51, "brute": 96, "caller": 84}.get(enemy.kind, 74)
+        if enemy.infected:
+            bar_width = 48
+            bar_y = y + 12
+            pygame.draw.rect(self.canvas, INK, (x-bar_width//2, bar_y, bar_width, 7), border_radius=3)
+            health = max(0, min(4, enemy.health))
+            pygame.draw.rect(self.canvas, RED, (x-bar_width//2+2, bar_y+2, round((bar_width-4)*health/4), 3), border_radius=2)
         if enemy.windup:
             pygame.draw.arc(self.canvas, RED, (x-24, y-15, 48, 27), 0, math.tau, 4)
             self.words("!", (x, y-height-13), 19, RED, True, "center")

@@ -9,7 +9,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
-from nthu_adventure.survival import Actor, CAMPUS_BUILDINGS, ENDING, GEAR, KINDS, MUTATIONS, RunStore, body, simulate
+from nthu_adventure.survival import Actor, CAMPUS_BUILDINGS, ENDING, GEAR, KINDS, MUTATIONS, RunStore, body, simulate, use_gear
 from nthu_adventure.survival_game import MAP_PAGE_SIZE, Game
 
 
@@ -140,6 +140,28 @@ class LastReportTest(unittest.TestCase):
                     g.draw((0, 0))
                     self.assertIsNone(g.store.load())
         self.assertNotEqual(routes[0], routes[1])
+
+    def test_baseball_bat_pickup_and_four_hit_knockback(self):
+        g = self.game
+        run = g.run_state
+        bat_cache = next(cache for cache in run.caches if cache.id == "campus/materials_lab_court/bat")
+        self.assertEqual(bat_cache.area, "campus")
+        self.assertIn((bat_cache.position[0] // 32), range(45, 53))
+        self.assertIn((bat_cache.position[1] // 32), range(39, 52))
+
+        run.position = (100, 100)
+        run.facing = "right"
+        run.pack["bat"] = 1
+        enemy = Actor("wanderer", (150, 100), status="hostile")
+        run.actors = {"target": enemy}
+        for hit in range(4):
+            enemy.position = (150, 100)
+            enemy.status = "hostile"
+            enemy.health = max(1, enemy.health)
+            self.assertEqual(use_gear(run, "bat", lambda rect: False), "used_bat")
+            self.assertGreater(enemy.position[0], 150)
+        self.assertEqual(enemy.health, 0)
+        self.assertEqual(enemy.status, "gone")
 
     def test_bite_transmission_and_full_restart(self):
         g = self.game

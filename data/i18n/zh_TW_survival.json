@@ -147,6 +147,7 @@
   "survival.event.betrayal": "周廷帶著交給他的水跑了。",
   "survival.event.found": "找到：{item}",
   "survival.event.empty": "這個道具欄是空的。",
+  "survival.event.empty_bat": "這個道具欄是空的。請思考球棒應該出現在哪？參考地圖",
   "survival.event.full": "目前不需要補充。",
   "survival.event.empty_battery": "手電筒沒電了。",
   "survival.event.no_charge": "需要手電筒，且電量低於 85%。",

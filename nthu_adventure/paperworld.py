@@ -252,6 +252,29 @@ class PaperWorld:
         for island in ISLANDS:
             if island.get('pavilion'): self._pavilion(pixel_points([island['center']])[0],21)
         for feature in LAKE_FEATURES: self._lake_feature(feature,rng)
+        baseball_center=(57*TILE,40*TILE)
+        baseball_radius=9*TILE
+        baseball_start=math.pi/2
+        baseball_stop=math.pi
+        baseball_points=[baseball_center]
+        for i in range(91):
+            angle=baseball_start+(baseball_stop-baseball_start)*i/90
+            baseball_points.append((
+                round(baseball_center[0]+baseball_radius*math.cos(angle)),
+                round(baseball_center[1]+baseball_radius*math.sin(angle)),
+            ))
+        pygame.draw.polygon(self.ground,(142,164,123),baseball_points)
+        baseball_rect=(baseball_center[0]-baseball_radius,baseball_center[1]-baseball_radius,
+                       2*baseball_radius,2*baseball_radius)
+        pygame.draw.arc(self.ground,(237,232,211),baseball_rect,math.pi,math.pi*3/2,3)
+        pygame.draw.line(self.ground,(237,232,211),
+                         baseball_center,baseball_points[-1],3)
+        pygame.draw.line(self.ground,(237,232,211),
+                         baseball_center,(baseball_center[0],baseball_center[1]+baseball_radius),3)
+        pygame.draw.line(self.ground,(237,232,211),
+                         (53*TILE,40*TILE),(53*TILE,44*TILE),3)
+        pygame.draw.line(self.ground,(237,232,211),
+                         (53*TILE,44*TILE),(57*TILE,44*TILE),3)
         for field in SPORTS_FIELDS:
             rect=pygame.Rect(field.pixels())
             pygame.draw.rect(self.ground,(167,139,112),rect.inflate(10,10),border_radius=12)
@@ -263,6 +286,7 @@ class PaperWorld:
         forbidden=list(self.collision_rects)
         forbidden += [pygame.Rect(b['rect'].pixels()).inflate(140,180) for b in BUILDINGS]
         forbidden += [pygame.Rect(v.pixels()).inflate(12,12) for v in SPORTS_FIELDS]
+        forbidden += [pygame.Rect(48*TILE,40*TILE,9*TILE,9*TILE)]
         forbidden += [pygame.Rect(round(self.door(b).x)-60,round(self.door(b).y)-15,120,120) for b in BUILDINGS]
         forbidden += [pygame.Rect(*tile_center(n['tile']),1,1).inflate(75,75) for n in NPCS]
         forbidden += [pygame.Rect(round(p['tile'][0]*TILE),round(p['tile'][1]*TILE),1,1).inflate(140,150) for p in LAKE_FEATURES]

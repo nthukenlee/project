@@ -17,7 +17,7 @@ from pygame import Vector2
 from .constants import APP_FOLDER, WORLD_HEIGHT, WORLD_WIDTH
 from .content import BUILDINGS, ROADS, WALKWAYS, SPAWN_TILE, tile_center
 from .expedition import (
-    DARK_MINUTE, ENEMY_SPEED, MAIN_STEPS, MINUTE_SECONDS, OUTBREAK_SITES, OUTDOOR_CLUES, ROOM_EVENTS,
+    ENEMY_SPEED, MAIN_STEPS, MINUTE_SECONDS, OUTBREAK_SITES, OUTDOOR_CLUES, ROOM_EVENTS,
     SIGNAL_MINUTE, START_MINUTE, STOP_MINUTE, STORY_STEPS, Encounter, choose_events, main_route,
     outbreak_site, valid_route,
 )
@@ -68,6 +68,7 @@ class Actor:
     position: tuple
     area: str = "campus"
     status: str = "waiting"
+    health: int = 4
     facing: str = "down"
     moving: bool = False
     windup: float = 0
@@ -186,7 +187,7 @@ class Run:
 
     @property
     def night(self):
-        return "playback" in self.observations or (self.blackout and self.minute >= DARK_MINUTE)
+        return "playback" in self.observations or self.blackout
 
     @property
     def team(self):
@@ -220,7 +221,7 @@ class Run:
         self.thirst = max(0, self.thirst - seconds * .225)
 
     def add_gear(self, item):
-        self.pack[item] += 5 if item == "bat" else 1
+        self.pack[item] += 1
         if item == "lamp" and self.battery <= 0:
             self.battery = 85
 
@@ -446,10 +447,15 @@ class CampusSlots:
         rng.shuffle(spare)
         for cache, item in zip(spare, extras):
             cache.item = item
+        bat_point = (51 * 32 + 16, 42 * 32 + 16)
+        caches.append(Cache("campus/materials_lab_court/bat", "campus", bat_point, "bat", container="ground"))
         return caches
 
     def restore_supplies(self, run):
         if run.supply_layout >= 2:
+            if not any(cache.id == "campus/materials_lab_court/bat" for cache in run.caches):
+                bat_point = (51 * 32 + 16, 42 * 32 + 16)
+                run.caches.append(Cache("campus/materials_lab_court/bat", "campus", bat_point, "bat", container="ground"))
             return
         previously_opened = {(cache.area, tuple(cache.position)) for cache in run.caches if cache.taken}
         consumed = Counter(cache.item for cache in run.caches if cache.taken and cache.item)
@@ -552,7 +558,6 @@ def use_gear(run, item, collides):
         run.riding = not run.riding
     else:
         direction = Vector2(FACING[run.facing])
-        run.pack["bat"] -= 1
         for _, enemy in nearby_targets(run, run.area):
             if not enemy.infected:
                 continue
@@ -565,6 +570,10 @@ def use_gear(run, item, collides):
                 enemy.cooldown = .95
                 force = {"armored": 28, "brute": 16}.get(enemy.kind, 68)
                 enemy.position = tuple(move(enemy.position, direction * force, collides))
+                enemy.health = max(0, enemy.health - 1)
+                if enemy.health == 0:
+                    enemy.status = "gone"
+                    enemy.chasing = False
     return f"used_{item}"
 
 
