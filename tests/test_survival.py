@@ -9,7 +9,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
-from nthu_adventure.survival import Actor, CAMPUS_BUILDINGS, ENDING, GEAR, KINDS, MUTATIONS, RunStore, body, simulate, use_gear
+from nthu_adventure.survival import Actor, CAMPUS_BUILDINGS, ENDING, GEAR, INFECTION_SECONDS, KINDS, MUTATIONS, Projectile, Run, RunStore, body, simulate, use_gear
 from nthu_adventure.survival_game import MAP_PAGE_SIZE, Game
 
 
@@ -51,14 +51,14 @@ class LastReportTest(unittest.TestCase):
         self.assertEqual([c.position for c in first.caches], [c.position for c in repeat.caches])
         self.assertNotEqual([c.position for c in first.caches], [c.position for c in other.caches])
         self.assertNotEqual(first.actors["enemy_0"].position, other.actors["enemy_0"].position)
-        self.assertEqual({c.item for c in first.caches[:4]}, {"water", "food", "bat", "lamp"})
+        self.assertEqual({c.item for c in first.caches[:4]}, {"water", "food", "bat"})
         self.assertEqual({a.kind for a in first.actors.values() if a.infected}, set(KINDS))
-        self.assertIn(sum(a.infected for a in first.actors.values()), (32, 33))
+        self.assertGreater(sum(a.infected for a in first.actors.values()), 33)
         g.run_state.position = next(a.position for a in g.run_state.actors.values() if a.infected)
         g.draw((0, 0))
-        self.assertEqual({cache.area for cache in first.caches}, set(g.rooms))
+        self.assertEqual({cache.area for cache in first.caches}, set(g.rooms) | {"campus"})
         self.assertGreaterEqual(sum(bool(cache.item) for cache in first.caches), 40)
-        self.assertEqual({cache.area for cache in first.caches if cache.item}, set(g.rooms))
+        self.assertEqual({cache.area for cache in first.caches if cache.item}, set(g.rooms) | {"campus"})
         self.assertTrue(any(not cache.item for cache in first.caches))
         for area, room in g.rooms.items():
             cache = next(cache for cache in first.caches if cache.area == area)
@@ -88,6 +88,15 @@ class LastReportTest(unittest.TestCase):
                 g.localizer.set_language(language)
                 run = g.run_state
                 run.start_outbreak()
+                key_cache = next(c for c in run.caches if c.item == "key")
+                self.assertNotIn(key_cache.area, run.locked)
+                run.position = g.slots.doors[key_cache.area]
+                g.interact()
+                run.position = key_cache.position
+                g.interact()
+                self.assertEqual(run.pack["key"], 1)
+                run.position = g.rooms[key_cache.area].entry
+                g.interact()
                 routes.append(dict(run.route))
                 if language == "en":
                     run.position = g.slots.doors["education"]
@@ -141,27 +150,26 @@ class LastReportTest(unittest.TestCase):
                     self.assertIsNone(g.store.load())
         self.assertNotEqual(routes[0], routes[1])
 
-    def test_baseball_bat_pickup_and_four_hit_knockback(self):
-        g = self.game
-        run = g.run_state
-        bat_cache = next(cache for cache in run.caches if cache.id == "campus/materials_lab_court/bat")
-        self.assertEqual(bat_cache.area, "campus")
-        self.assertIn((bat_cache.position[0] // 32), range(45, 53))
-        self.assertIn((bat_cache.position[1] // 32), range(39, 52))
-
+    def test_bat_stuns_drops_key_and_cannot_kill(self):
+        game = self.game
+        run = game.run_state
+        bat = next(cache for cache in run.caches if cache.id == "campus/materials_lab_court/bat")
+        self.assertEqual(bat.area, "campus")
+        self.assertEqual(tuple(v // 32 for v in bat.position), (51, 42))
         run.position = (100, 100)
         run.facing = "right"
-        run.pack["bat"] = 1
-        enemy = Actor("wanderer", (150, 100), status="hostile")
+        run.add_gear("bat")
+        enemy = Actor("hunter", (150, 100), status="hostile", carried_key=True)
         run.actors = {"target": enemy}
-        for hit in range(4):
+        for _ in range(4):
             enemy.position = (150, 100)
-            enemy.status = "hostile"
-            enemy.health = max(1, enemy.health)
-            self.assertEqual(use_gear(run, "bat", lambda rect: False), "used_bat")
+            self.assertEqual(use_gear(run, "bat", lambda _: False), "used_bat")
             self.assertGreater(enemy.position[0], 150)
-        self.assertEqual(enemy.health, 0)
-        self.assertEqual(enemy.status, "gone")
+            self.assertGreater(enemy.stunned, 0)
+        self.assertEqual(use_gear(run, "bat", lambda _: False), "too_tired")
+        self.assertEqual(enemy.status, "hostile")
+        self.assertEqual(run.pack["bat"], 1)
+        self.assertEqual(len([cache for cache in run.caches if cache.id == "drop/target"]), 1)
 
     def test_bite_transmission_and_full_restart(self):
         g = self.game
@@ -175,7 +183,7 @@ class LastReportTest(unittest.TestCase):
         self.assertEqual(run.actors["student"].status, "bitten")
         g.store.save(run)
         round_trip = g.store.load()
-        self.assertEqual(round_trip.actors["student"].infection, 8)
+        self.assertEqual(round_trip.actors["student"].infection, INFECTION_SECONDS)
         run.actors["attacker"].area = "main_library"
         run.actors["student"].infection = .01
         simulate(run, .02, pygame.Vector2(), False, lambda rect: False)
@@ -185,6 +193,9 @@ class LastReportTest(unittest.TestCase):
         run.actors["student"].target = "player"
         run.actors["student"].position = base
         g.update(.02)
+        self.assertIsNone(run.death)
+        self.assertGreater(run.infection_until, run.elapsed)
+        g.update(1.36)
         self.assertEqual(run.death, "bite")
         self.assertEqual(g.scene, "death")
         self.assertIsNone(g.store.load())
@@ -218,6 +229,94 @@ class LastReportTest(unittest.TestCase):
             g.update(.02)
             self.assertEqual(run.death, need)
             self.assertIsNone(g.store.load())
+
+    def test_thrown_debris_causes_injury_and_contamination(self):
+        direction = pygame.Vector2(1, 0)
+        healthy = Run(1, (100, 100))
+        injured = Run(1, (100, 100))
+        injured.projectiles.append(Projectile("campus", (85, 100), (350, 0), False, .1, .1))
+        self.assertIn("throw_injury", simulate(injured, .045, pygame.Vector2(), False, lambda _: False))
+        self.assertEqual(injured.infection_until, 0)
+        after = injured.position[0]
+        simulate(injured, .1, direction, False, lambda _: False)
+        simulate(healthy, .1, direction, False, lambda _: False)
+        self.assertAlmostEqual(injured.position[0]-after, (healthy.position[0]-100)*.8)
+
+        infected = Run(2, (100, 100))
+        infected.projectiles.append(Projectile("campus", (85, 100), (350, 0), True, .1, .1))
+        self.assertIn("throw_infected", simulate(infected, .045, pygame.Vector2(), False, lambda _: False))
+        self.assertIsNone(infected.death)
+        simulate(infected, 1.4, pygame.Vector2(), False, lambda _: False)
+        self.assertEqual(infected.death, "contamination")
+
+    def test_bicycle_and_blocked_side_exit_have_distinct_gates(self):
+        game = self.game
+        run = game.run_state
+        bike = next(cache for cache in run.caches if cache.item == "bike")
+        run.area, run.position = bike.area, bike.position
+        game.interact()
+        self.assertFalse(bike.taken)
+        run.add_gear("key")
+        game.interact()
+        self.assertEqual(run.pack["bike"], 1)
+        self.assertEqual(run.pack["key"], 1)
+
+        building = "gym"
+        run.area, run.position = building, game.slots.side_entries[building]
+        gate = building + "/side"
+        run.start_outbreak()
+        run.actors = {"blocker": Actor("stalker", game.slots.side_exits[building], status="hostile", guard_door=gate)}
+        self.assertTrue(game.blocked_door(gate))
+        game.interact()
+        self.assertEqual(run.area, building)
+        run.position = game.rooms[building].entry
+        game.interact()
+        self.assertEqual(run.area, "campus")
+
+    def test_side_entrances_connect_to_distinct_walkable_interiors(self):
+        game = self.game
+        for area, point in game.slots.side_entries.items():
+            with self.subTest(area=area):
+                room = game.rooms[area]
+                outside = game.slots.side_exits[area]
+                self.assertNotEqual(room.entry, point)
+                self.assertFalse(room.hit(body(point)))
+                self.assertTrue(walkable_steps(room.entry, point, room.hit))
+                self.assertFalse(game.world.collides(body(outside)))
+                self.assertLess(min(pygame.Vector2(outside).distance_to(cell)
+                                    for cell in game.slots.reachable), 20)
+
+    def test_thrower_telegraphs_and_takes_aim_before_projectile_flight(self):
+        run = Run(3, (160, 100), area="gym")
+        enemy = Actor("thrower", (20, 100), "gym", "hostile")
+        run.actors["thrower"] = enemy
+        notices = simulate(run, .05, pygame.Vector2(), False, lambda _: False)
+        self.assertIn("throw_warning", notices)
+        self.assertEqual(enemy.throw_target, (160, 100))
+        self.assertFalse(run.projectiles)
+        run.position = (160, 135)
+        simulate(run, .8, pygame.Vector2(), False, lambda _: False)
+        self.assertEqual(len(run.projectiles), 1)
+        self.assertEqual(run.projectiles[0].velocity, (350, 0))
+        for _ in range(40):
+            simulate(run, .03, pygame.Vector2(), False, lambda _: False)
+        self.assertEqual(run.injury_until, 0)
+
+    def test_old_save_removes_light_items_and_converts_old_infected(self):
+        from dataclasses import asdict
+        payload = asdict(self.game.run_state)
+        payload["pack"] = {"food": 1, "water": 0, "bat": 1, "lamp": 1, "cell": 3, "bike": 1}
+        payload["selected"] = 5
+        payload["battery"], payload["lamp_on"] = 63, True
+        payload["access_ready"] = False
+        payload["actors"]["enemy_0"]["kind"] = "wanderer"
+        payload["actors"]["enemy_0"]["health"] = 2
+        old = Run.read(payload)
+        self.game.slots.restore_access(old)
+        self.assertEqual(old.actors["enemy_0"].kind, "hunter")
+        self.assertEqual(tuple(old.pack), GEAR)
+        self.assertEqual(GEAR[old.selected], "bike")
+        self.assertTrue(any(cache.item == "key" and cache.area not in old.locked for cache in old.caches))
 
     def test_save_roundtrip_and_corrupt_backup(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -342,47 +441,20 @@ class LastReportTest(unittest.TestCase):
         g.action("zoom")
         g.map_selected = None
 
-    def test_night_keeps_nearby_vision_and_flashlight_extends_it(self):
-        g = self.game
-        run = g.run_state
-        run.position = g.building_entrances["main_library"]
+    def test_night_keeps_nearby_vision_without_removed_gear(self):
+        game = self.game
+        run = game.run_state
+        run.position = game.building_entrances["main_library"]
         run.observe("playback")
-        run.facing = "right"
-        camera = g.world.camera_for(*run.position)
+        camera = game.world.camera_for(*run.position)
         origin = pygame.Vector2(run.position) - camera.topleft
-        ahead = pygame.Vector2(run.position) + (180, 0)
-        behind = pygame.Vector2(run.position) - (180, 0)
         with patch("pygame.time.get_ticks", return_value=1200):
-            g.draw_play((0, 0), hud=False)
-        unlit = g.canvas.copy()
-        self.assertNotEqual(unlit.get_at(origin + (25, 0))[:3], (0, 0, 0))
-        self.assertTrue(g.lit_at(run.position))
-        self.assertTrue(g.lit_at(origin + camera.topleft + (125, 0)))
-        self.assertFalse(g.lit_at(ahead))
-
-        run.add_gear("lamp")
-        g.key(pygame.K_4)
-        g.key(pygame.K_SPACE)
-        self.assertTrue(run.lamp_on)
-        self.assertTrue(g.lit_at(ahead))
-        self.assertFalse(g.lit_at(behind))
-        with patch("pygame.time.get_ticks", return_value=1200):
-            g.draw_play((0, 0), hud=False)
-        self.assertGreater(sum(g.canvas.get_at(origin + (180, 0))[:3]), sum(unlit.get_at(origin + (180, 0))[:3]))
-        self.assertEqual(g.canvas.get_at(origin - (180, 0)), unlit.get_at(origin - (180, 0)))
-        run.facing = "up"
-        self.assertTrue(g.lit_at(pygame.Vector2(run.position) - (0, 160)))
-        self.assertFalse(g.lit_at(ahead))
-
-        run.battery = 10
-        run.add_gear("cell")
-        g.key(pygame.K_5)
-        g.key(pygame.K_SPACE)
-        self.assertGreater(run.battery, 10)
-        self.assertEqual(run.pack["cell"], 0)
-        g.key(pygame.K_4)
-        g.key(pygame.K_SPACE)
-        self.assertFalse(run.lamp_on)
+            game.draw_play((0, 0), hud=True)
+        self.assertNotEqual(game.canvas.get_at(origin + (25, 0))[:3], (0, 0, 0))
+        self.assertTrue(game.lit_at(pygame.Vector2(run.position) + (125, 0)))
+        self.assertFalse(game.lit_at(pygame.Vector2(run.position) + (180, 0)))
+        self.assertNotIn("lamp", run.pack)
+        self.assertNotIn("cell", run.pack)
 
     def test_title_rain_moves_and_waiting_indoor_npc_stays_still(self):
         game = self.game
@@ -434,25 +506,25 @@ class LastReportTest(unittest.TestCase):
         game.settings_save()
         self.assertEqual(game.store.profile().appearance["gender"], 1)
         run = game.run_state
-        variants = [actor for actor in run.actors.values() if actor.kind in MUTATIONS]
+        variants = [actor for key, actor in run.actors.items() if key.startswith("mutation_")]
         self.assertEqual({actor.kind for actor in variants}, set(MUTATIONS))
         self.assertTrue(all(actor.status == "dormant" for actor in variants))
         run.start_outbreak()
-        run.elapsed += 65
+        run.elapsed += 25
         run.release_infected()
         self.assertTrue(all(actor.status == "dormant" for actor in variants))
         run.elapsed += 60
         run.release_infected()
         self.assertTrue(all(actor.status == "hostile" for actor in variants))
         art = game.world.characters
-        self.assertLess(art.zombie_sprite("crawler", "down", 0, False).get_height(),
-                        art.zombie_sprite("brute", "down", 0, False).get_height())
+        self.assertLess(art.zombie_sprite("hidden", "down", 0, False).get_height(),
+                        art.zombie_sprite("thrower", "down", 0, False).get_height())
 
     def test_supply_interaction_reveals_contents_only_once(self):
         game = self.game
         state = game.run_state
         cache = next(cache for cache in state.caches if cache.item == "water")
-        self.assertFalse(any(kind == "cache" for kind, _, _ in game.interactions()))
+        self.assertFalse(any(kind == "cache" and key == cache.id for kind, key, _ in game.interactions()))
         state.area, state.position = cache.area, cache.position
         self.assertIn(cache.container, ("drawer", "shelf", "cabinet"))
         self.assertEqual(state.pack["water"], 0)
@@ -467,6 +539,7 @@ class LastReportTest(unittest.TestCase):
         run = game.run_state
         run.start_outbreak()
         building = "education"
+        run.add_gear("key")
         door = game.slots.doors[building]
         run.position = door
         start = next(point for point in game.slots.reachable
@@ -474,7 +547,7 @@ class LastReportTest(unittest.TestCase):
                      and not game.world.collides(body(point)))
         # Put the pursuer at the threshold to make line-of-sight deterministic.
         chasing = Actor("hunter", tuple(door), status="hostile", target="player", chasing=True)
-        waiting = Actor("wanderer", start, status="hostile")
+        waiting = Actor("hunter", start, status="hostile")
         run.actors = {"first": chasing, "second": waiting}
         game.profile.scares = True
         game.interact()
@@ -498,6 +571,7 @@ class LastReportTest(unittest.TestCase):
         run = game.run_state
         run.start_outbreak()
         building = "education"
+        run.add_gear("key")
         door = game.slots.doors[building]
         run.position = door
         run.latched[building] = run.elapsed + 20

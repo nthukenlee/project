@@ -26,22 +26,23 @@ ENDING = "last_name"
 STORY_ROOMS = ("education", "main_library", "xin_hall")
 LOCATIONS = tuple(ROOM_EVENTS)
 CAMPUS_BUILDINGS = {b["id"]: b for b in BUILDINGS}
-GEAR = ("food", "water", "bat", "lamp", "cell", "bike")
+GEAR = ("food", "water", "bat", "key", "bike")
+OLD_GEAR = ("food", "water", "bat", "lamp", "cell", "bike")
 LEGACY_EVIDENCE = ("evacuation", "recording", "playback", "dispatch")
 OBSERVATIONS = ("storm", "lawn", "exhibit", *STORY_STEPS)
 STYLE_LIMITS = {"skin": 4, "hair_style": 4, "hair_color": 5, "shirt": 6, "gender": 2}
 APPEARANCE = {"skin": 1, "hair_style": 0, "hair_color": 0, "shirt": 0, "gender": 0}
 FACING = {"up": (0, -1), "right": (1, 0), "down": (0, 1), "left": (-1, 0)}
 KINDS = {
-    "wanderer": (66, 162, .55, (171, 134, 93)),
     "hunter": (110, 210, .47, (213, 102, 71)),
-    "caller": (74, 195, .68, (200, 164, 95)),
-    "mimic": (91, 150, .76, (153, 157, 196)),
-    "armored": (55, 125, .92, (124, 166, 161)),
-    "crawler": (117, 125, .60, (179, 147, 185)),
-    "brute": (56, 152, 1.05, (202, 146, 110)),
+    "hidden": (98, 145, .62, (167, 166, 127)),
+    "stalker": (91, 215, .65, (156, 149, 191)),
+    "thrower": (68, 240, .76, (212, 157, 94)),
 }
-MUTATIONS = ("crawler", "brute")
+MUTATIONS = ("hidden", "thrower")
+LEGACY_INFECTED = {"wanderer": "hunter", "caller": "thrower", "mimic": "hidden",
+                   "armored": "stalker", "crawler": "hidden", "brute": "thrower"}
+INFECTION_SECONDS = 5.5
 DIRECTIONS = ((1, 0), (0, 1), (-1, 0), (0, -1))
 
 
@@ -68,7 +69,6 @@ class Actor:
     position: tuple
     area: str = "campus"
     status: str = "waiting"
-    health: int = 4
     facing: str = "down"
     moving: bool = False
     windup: float = 0
@@ -86,6 +86,12 @@ class Actor:
     spawn_delay: float = 0
     entry_delay: float = 0
     stride: float = 0
+    stunned: float = 0
+    carried_key: bool = False
+    concealed: bool = False
+    reveal: float = 0
+    throw_target: tuple = ()
+    guard_door: str = ""
 
     def __post_init__(self):
         if not self.home:
@@ -107,6 +113,17 @@ class Cache:
 
 
 @dataclass
+class Projectile:
+    area: str
+    position: tuple
+    velocity: tuple
+    contaminated: bool
+    injury_roll: float
+    infection_roll: float
+    remaining: float = .85
+
+
+@dataclass
 class Run:
     seed: int
     position: tuple
@@ -118,9 +135,17 @@ class Run:
     pack: dict = field(default_factory=lambda: dict.fromkeys(GEAR, 0))
     hunger: float = 100
     thirst: float = 100
-    battery: float = 0
-    lamp_on: bool = False
     riding: bool = False
+    stamina: float = 100
+    exhausted: bool = False
+    injury_until: float = 0
+    infection_until: float = 0
+    infection_cause: str = "bite"
+    projectiles: list[Projectile] = field(default_factory=list)
+    throws: int = 0
+    locked: list[str] = field(default_factory=list)
+    access_ready: bool = False
+    event_progress: dict = field(default_factory=dict)
     selected: int = 0
     trail: list = field(default_factory=list)
     actors: dict[str, Actor] = field(default_factory=dict)
@@ -191,7 +216,8 @@ class Run:
 
     @property
     def team(self):
-        return [key for key, actor in self.actors.items() if actor.status in ("joined", "bitten") and actor.choice in ("join", "trust", "escort")]
+        return [key for key, actor in self.actors.items() if actor.status in ("joined", "bitten")
+                and actor.choice in ("join", "trust", "escort", "lawn_fast", "lawn_slow")]
 
     @property
     def goal(self):
@@ -221,17 +247,41 @@ class Run:
         self.thirst = max(0, self.thirst - seconds * .225)
 
     def add_gear(self, item):
-        self.pack[item] += 1
-        if item == "lamp" and self.battery <= 0:
-            self.battery = 85
+        if item in ("key", "bike", "bat"):
+            self.pack[item] = 1
+        else:
+            self.pack[item] += 1
 
     @classmethod
     def read(cls, payload):
+        payload = dict(payload)
+        payload.pop("battery", None)
+        payload.pop("lamp_on", None)
+        if not isinstance(payload.get("pack"), dict):
+            raise ValueError("invalid inventory")
+        if "lamp" in payload["pack"] or "cell" in payload["pack"]:
+            slot = payload.get("selected", 0)
+            selected = OLD_GEAR[slot] if 0 <= slot < len(OLD_GEAR) else "food"
+            payload["selected"] = GEAR.index(selected) if selected in GEAR else 0
+            payload["pack"] = {item: payload["pack"].get(item, 0) for item in GEAR}
         state = cls(**payload)
-        state.actors = {key: Actor(**value) for key, value in state.actors.items()}
-        state.caches = [Cache(**value) for value in state.caches]
+        state.actors = {}
+        for key, old_actor in payload.get("actors", {}).items():
+            actor = dict(old_actor)
+            actor.pop("health", None)
+            actor["kind"] = LEGACY_INFECTED.get(actor["kind"], actor["kind"])
+            if actor["status"] == "bitten":
+                actor["infection"] = min(INFECTION_SECONDS, actor["infection"])
+            state.actors[key] = Actor(**actor)
+        state.caches = [Cache(**{**value, "item": "" if value["item"] in ("lamp", "cell") else value["item"]})
+                        for value in state.caches]
+        state.projectiles = [Projectile(**value) for value in state.projectiles]
         state.encounters = {key: Encounter(**value) for key, value in state.encounters.items()}
         state.encounters = choose_events(state.seed, state.encounters)
+        current_actors = {event.actor_id for event in state.encounters.values()}
+        state.actors = {key: actor for key, actor in state.actors.items()
+                        if not key.startswith("enc_") or actor.status not in ("waiting", "disguised")
+                        or key in current_actors}
         if not state.outbreak:
             state.actors = {
                 key: actor for key, actor in state.actors.items()
@@ -346,13 +396,24 @@ class CampusSlots:
     """Use the existing collision geometry to find connected, protected spawn cells."""
     def __init__(self, world, rooms):
         self.world = world
+        self.rooms = rooms
         self.start = tile_center(SPAWN_TILE)
         self.doors = {key: world.door(CAMPUS_BUILDINGS[key]) for key in LOCATIONS}
         self.reachable = self.connected()
         self.side_exits = {}
-        for key in ("general_2", "engineering_1", "engineering_2", "chemistry", "gym"):
+        self.side_entries = {}
+        for key in ("general_2", "engineering_1", "engineering_2", "chemistry", "gym",
+                    "education", "main_library", "xin_hall"):
             footprint = pygame.Rect(CAMPUS_BUILDINGS[key]["rect"].pixels())
             self.side_exits[key] = self.near((footprint.right + 45, footprint.centery))
+            room = rooms[key]
+            fixture = next((f.point for f in room.fixtures if f.key == "side_exit"), None)
+            if fixture is None:
+                cells = self.walkable_cells(room.entry, 20, room.hit)
+                reserved = [room.story_point, room.event_point, *(f.point for f in room.fixtures)]
+                fixture = max((p for p in cells if all(distance(p, spot) > 55 for spot in reserved)),
+                              key=lambda p: p[0] + distance(p, room.entry) * .3)
+            self.side_entries[key] = fixture
         self.path_points = [
             Vector2(x * 32, y * 32)
             for road in ROADS + WALKWAYS
@@ -370,6 +431,28 @@ class CampusSlots:
         passer_tiles = ((139,43), (133,48), (126,54), (117,64), (94,79))
         self.passer_points = [self.near(Vector2(tile) * 32) for tile in passer_tiles]
         self.containers = {key: self.room_containers(room) for key, room in rooms.items()}
+        self.start_rooms = sorted(self.containers, key=lambda key: distance(self.doors[key], self.start))[:3]
+        self.event_points = {}
+        self.rest_points = {}
+        self.hidden_spots = {}
+        for key, room in rooms.items():
+            reserved = [room.entry, room.story_point, room.event_point, *(f.point for f in room.fixtures)]
+            if key in self.side_entries:
+                reserved.append(self.side_entries[key])
+            self.hidden_spots[key] = [
+                p for p in self.walkable_cells(room.entry, 30, room.hit)
+                if all(distance(p, point) >= 112 for point in reserved)
+            ]
+        for key in ("general_4", "gym", "xin_hall"):
+            room = rooms[key]
+            cells = self.walkable_cells(room.entry, 16, room.hit)
+            occupied = [room.story_point, room.event_point, *(f.point for f in room.fixtures),
+                        *(point for point, _ in self.containers[key])]
+            choices = [p for p in cells if all(distance(p, spot) >= 48 for spot in occupied)]
+            near = min(choices, key=lambda p: distance(p, room.event_point))
+            far = max(choices, key=lambda p: distance(p, near))
+            self.event_points[key] = (near, far)
+            self.rest_points[key] = near
         self.enemies = self.enemy_groups()
 
     def connected(self):
@@ -420,14 +503,14 @@ class CampusSlots:
 
     def place_supplies(self, run):
         rng = Random(f"stocked-rooms/{run.seed}")
-        starts = sorted(self.containers, key=lambda key: distance(self.doors[key], self.start))[:3]
-        early = ["water", "food", "lamp", "bat"]
+        starts = self.start_rooms
+        early = ["water", "food", "water", "bat"]
         rng.shuffle(early)
         rooms = [key for key in self.containers if key not in starts]
         rng.shuffle(rooms)
         staples = ["water", "food"] * 10
         rng.shuffle(staples)
-        extras = ["water"] * 7 + ["food"] * 6 + ["cell"] * 6 + ["bat"] * 2 + ["bike"]
+        extras = ["water"] * 10 + ["food"] * 10 + ["bike"]
         rng.shuffle(extras)
         caches = []
         for key in [*starts, *rooms]:
@@ -495,14 +578,58 @@ class CampusSlots:
                 break
             occupied.append(point)
             run.actors[f"mutation_{index}"] = Actor(kind, point, status="dormant",
-                                                     spawn_delay=72 + index * 18 + mutant_rng.randint(0, 9))
+                                                     spawn_delay=32 + index * 12 + mutant_rng.randint(0, 5),
+                                                     concealed=kind == "hidden")
+
+    def restore_access(self, run):
+        if run.access_ready:
+            return
+        rng = Random(f"campus-access/{run.seed}")
+        lockable = sorted(set(self.doors) - set(self.start_rooms) - {run.area})
+        run.locked = rng.sample(lockable, rng.randint(3, 5))
+        available = [c for c in run.caches if c.area in self.doors and not c.taken and c.area not in run.locked]
+        if available:
+            candidate = rng.choice([c for c in available if not c.item] or available)
+            displaced = candidate.item
+            candidate.item = "key"
+            if displaced:
+                empty = [c for c in run.caches if c is not candidate and not c.item and not c.taken]
+                if empty:
+                    rng.choice(empty).item = displaced
+        else:
+            area = rng.choice(self.start_rooms)
+            point, container = self.containers[area][0]
+            run.caches.append(Cache("access/key", area, point, "key", container=container))
+        if not run.pack["bike"] and not any(c.item == "bike" and not c.taken for c in run.caches):
+            area = rng.choice(self.start_rooms)
+            point, _ = self.containers[area][0]
+            run.caches.append(Cache("access/bike", area, point, "bike", container="bike"))
+        carriers = [actor for key, actor in run.actors.items()
+                    if key.startswith("enemy_") and actor.status in ("dormant", "hostile")]
+        for actor in rng.sample(carriers, min(3, len(carriers))):
+            actor.carried_key = True
+        for area in rng.sample(sorted(self.side_entries), 5):
+            if rng.random() < .55:
+                side = rng.choice((False, True))
+                gate = area + ("/side" if side else "")
+                point = self.side_exits[area] if side else tuple(self.doors[area])
+                spot = self.near(Vector2(point) + (0, 32))
+                run.actors[f"guard_{area}"] = Actor("stalker", spot, status="dormant",
+                                                   spawn_delay=6, guard_door=gate)
+        for index, area in enumerate(rng.sample(sorted(self.doors), 7)):
+            candidates = self.hidden_spots[area]
+            if candidates:
+                run.actors[f"indoor_{area}"] = Actor("hidden", rng.choice(candidates), area,
+                                                    status="dormant", spawn_delay=3 + index * 2,
+                                                    concealed=True)
+        run.access_ready = True
 
     def new(self, seed=None):
         seed = SystemRandom().getrandbits(63) if seed is None else seed
         rng = Random(seed)
         run = Run(seed, self.start, encounters=choose_events(seed))
         self.restore_supplies(run)
-        kinds = [kind for kind in KINDS if kind not in MUTATIONS] * 6
+        kinds = (["hunter"] * 17 + ["hidden"] * 6 + ["stalker"] * 4 + ["thrower"] * 3)
         rng.shuffle(kinds)
         for group in self.enemies:
             selected = []
@@ -512,7 +639,10 @@ class CampusSlots:
                 if all(distance(point, other) >= 125 for other in selected):
                     selected.append(point)
                     enemy_id = f"enemy_{len(run.actors)}"
-                    run.actors[enemy_id] = Actor(kinds.pop(), point, status="dormant", spawn_delay=((len(selected)-1) % 3) * 10)
+                    kind = kinds.pop()
+                    run.actors[enemy_id] = Actor(kind, point, status="dormant",
+                                                 spawn_delay=((len(selected)-1) % 3) * 5,
+                                                 concealed=kind == "hidden")
                     if len(selected) == 10:
                         break
         self.restore_mutations(run)
@@ -523,6 +653,7 @@ class CampusSlots:
         })
         for i, point in enumerate(self.passer_points):
             run.actors[f"passer_{i}"] = Actor("student", point, status="passing", identity=i)
+        self.restore_access(run)
         return run
 
 
@@ -543,22 +674,18 @@ def use_gear(run, item, collides):
             return "full"
         setattr(run, field_name, min(100, need + (38 if item == "food" else 46)))
         run.pack[item] -= 1
-    elif item == "lamp":
-        if run.battery <= 0:
-            return "empty_battery"
-        run.lamp_on = not run.lamp_on
-    elif item == "cell":
-        if not run.pack["lamp"] or run.battery > 85:
-            return "no_charge"
-        run.battery = min(100, run.battery + 58)
-        run.pack[item] -= 1
+    elif item == "key":
+        return "key_ready"
     elif item == "bike":
         if run.area != "campus":
             return "bike_outside"
         run.riding = not run.riding
     else:
+        if run.stamina < 22:
+            return "too_tired"
+        run.stamina -= 22
         direction = Vector2(FACING[run.facing])
-        for _, enemy in nearby_targets(run, run.area):
+        for key, enemy in nearby_targets(run, run.area):
             if not enemy.infected:
                 continue
             delta = Vector2(enemy.position) - run.position
@@ -567,13 +694,15 @@ def use_gear(run, item, collides):
                 enemy.chasing = True
             if delta.length_squared() <= 82**2 and delta.dot(direction) >= -5 and visible(run.position, enemy.position, collides):
                 enemy.windup = 0
-                enemy.cooldown = .95
-                force = {"armored": 28, "brute": 16}.get(enemy.kind, 68)
-                enemy.position = tuple(move(enemy.position, direction * force, collides))
-                enemy.health = max(0, enemy.health - 1)
-                if enemy.health == 0:
-                    enemy.status = "gone"
-                    enemy.chasing = False
+                enemy.throw_target = ()
+                enemy.stunned = 1.65
+                enemy.concealed = False
+                enemy.chasing = False
+                enemy.moving = False
+                enemy.position = tuple(move(enemy.position, direction * 60, collides))
+                if enemy.carried_key:
+                    enemy.carried_key = False
+                    run.caches.append(Cache(f"drop/{key}", run.area, enemy.position, "key", container="dropped_key"))
     return f"used_{item}"
 
 
@@ -623,7 +752,8 @@ def cross_door(run, area, source, destination, source_clear, destination_clear, 
     if run.outbreak and run.latched.get(door, 0) <= run.elapsed:
         pursuing = sorted(
             (actor for _, actor in nearby_targets(run, run.area)
-             if actor.infected and actor.chasing and actor.target in ("", "player")
+             if actor.infected and actor.chasing and not actor.stunned and not actor.concealed
+             and actor.target in ("", "player")
              and distance(source, actor.position) <= 165 and visible(actor.position, source, source_clear)),
             key=lambda actor: distance(source, actor.position),
         )[:2]
@@ -650,32 +780,95 @@ def cross_door(run, area, source, destination, source_clear, destination_clear, 
     return remaining
 
 
+def launch_projectile(run, enemy):
+    aim = Vector2(enemy.throw_target) - enemy.position
+    if not aim.length_squared():
+        return
+    rolls = Random(f"projectile/{run.seed}/{run.throws}")
+    run.throws += 1
+    run.projectiles.append(Projectile(run.area, enemy.position, tuple(aim.normalize() * 350),
+                                      rolls.random() < .4, rolls.random(), rolls.random()))
+
+
+def advance_projectiles(run, dt, collides):
+    notices = []
+    active = []
+    for projectile in run.projectiles:
+        step = min(projectile.remaining, dt)
+        projectile.remaining -= dt
+        if projectile.area != run.area:
+            if projectile.remaining > 0:
+                active.append(projectile)
+            continue
+        velocity = Vector2(projectile.velocity)
+        start = Vector2(projectile.position)
+        samples = max(1, math.ceil(velocity.length() * step / 6))
+        for index in range(1, samples + 1):
+            point = start + velocity * step * index / samples
+            if collides(pygame.Rect(round(point.x) - 3, round(point.y) - 3, 6, 6)):
+                break
+            if distance(point, run.position) <= 15:
+                if projectile.injury_roll < .35:
+                    run.injury_until = max(run.injury_until, run.elapsed + 10)
+                    notices.append("throw_injury")
+                    if projectile.contaminated and projectile.infection_roll < .20:
+                        run.infection_until = run.elapsed + 1.35
+                        run.infection_cause = "contamination"
+                        notices.append("throw_infected")
+                else:
+                    notices.append("throw_hit")
+                break
+        else:
+            if projectile.remaining > 0:
+                projectile.position = tuple(point)
+                active.append(projectile)
+    run.projectiles = active
+    return notices
+
+
 def simulate(run, dt, direction, sprinting, collides):
     """Advance only during active gameplay. Output IDs for UI/audio events."""
     if run.death or run.ending:
         return []
     run.elapsed += dt
+    if run.infection_until:
+        if run.elapsed >= run.infection_until:
+            run.death = run.infection_cause
+            return [run.death]
+        return []
     run.release_infected()
     outdoors = run.area == "campus"
+    if run.stamina < 8:
+        run.exhausted = True
+    elif run.stamina >= 27:
+        run.exhausted = False
+    sprinting = sprinting and not run.riding and not run.exhausted
+    if sprinting and direction:
+        run.stamina = max(0, run.stamina - dt * 17)
+    else:
+        run.stamina = min(100, run.stamina + dt * 11)
     exertion = 1.27 if sprinting and direction else 1
     run.hunger = max(0, run.hunger - dt * .155 * exertion)
     run.thirst = max(0, run.thirst - dt * .225 * exertion)
     if not run.hunger or not run.thirst:
         run.death = "hunger" if not run.hunger else "thirst"
         return [run.death]
-    if run.lamp_on:
-        run.battery = max(0, run.battery - dt * .78)
-        run.lamp_on = run.battery > 0
     if direction:
         run.facing = facing(direction)
         speed = 268 if run.riding else 192 if sprinting else 132
         if outdoors and run.weather == "rain":
             speed *= .8
+        if run.elapsed < run.injury_until:
+            speed *= .8
+        if "carrying_parcel" in run.event_progress:
+            speed *= .78
         run.position = tuple(move(run.position, direction.normalize() * speed * dt, collides))
     if not run.trail or distance(run.trail[-1], run.position) > 20:
         run.trail.append(run.position)
         del run.trail[:-45]
-    notices = []
+    notices = advance_projectiles(run, dt, collides)
+    if run.infection_until:
+        return notices
     for key, actor in run.actors.items():
         if actor.entry_delay > 0:
             actor.entry_delay = max(0., actor.entry_delay - dt)
@@ -688,6 +881,7 @@ def simulate(run, dt, direction, sprinting, collides):
         actor.infection -= dt
         if actor.infection <= 0:
             actor.status = "turned"
+            actor.kind = "hunter"
             actor.cooldown = .75
             notices.append("turned")
         elif key in run.team and actor.area == run.area:
@@ -708,7 +902,8 @@ def simulate(run, dt, direction, sprinting, collides):
             if not visible(actor.position, target, collides):
                 target = next((point for point in reversed(run.trail)
                                if distance(actor.position, point) > 17 and visible(actor.position, point, collides)), actor.position)
-            speed = 96 if actor.choice == "escort" else 238 if run.riding else 173
+            speed = {"escort": 96, "lawn_slow": 112, "lawn_fast": 181}.get(
+                actor.choice, 238 if run.riding else 173)
             follow(actor, target, speed, dt, collides)
         else:
             actor.moving = False
@@ -733,21 +928,40 @@ def simulate(run, dt, direction, sprinting, collides):
             continue
         actors = {"player": run.position}
         actors.update({key: actor.position for key, actor in active if actor.status in ("joined", "waiting", "bitten") and not actor.infected})
-        speed, sight, windup, _ = KINDS.get(enemy.kind, KINDS["wanderer"])
+        speed, sight, windup, _ = KINDS.get(enemy.kind, KINDS["hunter"])
+        if enemy.stunned > 0:
+            enemy.stunned = max(0., enemy.stunned - dt)
+            enemy.moving = False
+            continue
+        gap_to_player = distance(enemy.position, run.position)
+        if enemy.concealed:
+            enemy.moving = False
+            if gap_to_player <= 99 and visible(enemy.position, run.position, collides):
+                enemy.concealed = False
+                enemy.reveal = .72
+                notices.append("hidden_reveal")
+            continue
+        if enemy.reveal > 0:
+            enemy.reveal = max(0., enemy.reveal - dt)
+            continue
         enemy.cooldown = max(0, enemy.cooldown - dt)
         enemy.alerted = max(0, enemy.alerted - dt)
         if enemy.windup > 0:
             enemy.windup = max(0, enemy.windup-dt)
             if not enemy.windup:
+                if enemy.throw_target:
+                    launch_projectile(run, enemy)
+                    enemy.throw_target = ()
+                    enemy.cooldown = 3.2
+                    continue
                 target = actors.get(enemy.target)
-                reach = 59 if enemy.kind == "brute" else 45
-                if target is not None and distance(enemy.position, target) < reach and visible(enemy.position, target, collides):
+                if target is not None and distance(enemy.position, target) < 45 and visible(enemy.position, target, collides):
                     if enemy.target == "player":
-                        run.death = "bite"
-                        return notices + ["bite"]
+                        run.infection_until = run.elapsed + 1.35
+                        return notices + ["infection_started"]
                     victim = run.actors[enemy.target]
                     if victim.status != "bitten":
-                        victim.status, victim.infection = "bitten", 8
+                        victim.status, victim.infection = "bitten", INFECTION_SECONDS
                         notices.append("infected")
                 enemy.cooldown = 1.1
             continue
@@ -763,38 +977,39 @@ def simulate(run, dt, direction, sprinting, collides):
         sound_sight = 95 if run.riding else 58 if sprinting else 0
         radius = sight + (120 if enemy.alerted else 0)
         if target_id == "player":
-            radius += sound_sight + (48 if run.lamp_on else 0)
-        was_chasing = enemy.chasing
+            radius += sound_sight
         enemy.chasing = gap < radius and visible(enemy.position, target, collides)
         if enemy.chasing:
             enemy.target = target_id
             enemy.last_seen = target
-            enemy.linger = 6 if enemy.kind == "mimic" else 2.8
-        elif was_chasing and enemy.kind == "mimic":
-            notices.append("mimic_wait")
+            enemy.linger = 3.8 if enemy.kind == "stalker" else 2.8
         enemy.moving = False
-        attack_range = 49 if enemy.kind == "brute" else 37
+        attack_range = 37
         if enemy.chasing and gap < attack_range and enemy.cooldown <= 0:
             enemy.target, enemy.windup = target_id, windup
             enemy.facing = facing(Vector2(target) - enemy.position)
             notices.append("warning")
+        elif (enemy.kind == "thrower" and enemy.chasing and target_id == "player"
+              and 95 < gap < 235 and enemy.cooldown <= 0):
+            enemy.throw_target = tuple(target)
+            enemy.windup = .76
+            enemy.facing = facing(Vector2(target) - enemy.position)
+            notices.append("throw_warning")
         elif enemy.chasing and enemy.cooldown <= 0:
-            if enemy.kind == "caller" and enemy.alerted == 0:
-                for _, other in active:
-                    if other.infected and distance(other.position, enemy.position) < 290:
-                        other.alerted = 6
-                notices.append("call")
+            if enemy.kind == "stalker" and 83 < gap < 123 and run.elapsed % 3 < 2:
+                continue
             burst = 1.33 if enemy.kind == "hunter" and 46 < gap < 122 else 1
-            if enemy.kind == "crawler" and 40 < gap < 85:
-                burst = 1.23
             if outdoors and run.weather == "rain":
                 speed *= .92
             follow(enemy, target, speed * burst * ENEMY_SPEED, dt, collides)
         elif not enemy.chasing and not enemy.cooldown:
             if enemy.linger > 0:
                 enemy.linger = max(0, enemy.linger - dt)
-                if enemy.kind != "mimic" and enemy.last_seen and distance(enemy.position, enemy.last_seen) > 26:
+                if enemy.last_seen and distance(enemy.position, enemy.last_seen) > 26:
                     follow(enemy, enemy.last_seen, speed * .65 * ENEMY_SPEED, dt, collides)
+                continue
+            if enemy.guard_door:
+                follow(enemy, enemy.home, 35, dt, collides)
                 continue
             phase = run.elapsed * .46 + enemy.home[0] * .063
             patrol = Vector2(enemy.home) + Vector2(math.cos(phase), math.sin(phase)) * 39

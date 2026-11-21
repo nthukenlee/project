@@ -1,31 +1,27 @@
-"""Connect randomly cast incidents to character, resource, and route state."""
+"""Resolve campus encounters into choices, follow-up routes and persistent outcomes."""
+
 from pygame import Vector2
 
-from .expedition import EVENTS, MINUTE_SECONDS, OUTDOOR_POINTS
-from .survival import Actor, distance
-
-
-CHOICES = {
-    "investigate": "approach", "verify": "approach", "information": "ask",
-    "trade": "exchange", "share": "offer_water", "shelter": "offer_water",
-    "wait": "wait_here", "route": "take_route", "light": "lend_light",
-    "storm": "wait_here", "invite": "invite", "custody": "entrust",
-    "recover": "recover", "warning": "warn", "divert": "divert",
-    "barricade": "barricade", "escort": "escort",
-}
-LINES = {
-    "helpful": "cooperate", "guarded": "bargain", "panicked": "plead",
-    "selfish": "bargain", "mimic": "plead",
-}
+from .expedition import EVENTS, MINUTE_SECONDS, NAMES, OUTDOOR_POINTS
+from .survival import Actor, INFECTION_SECONDS, body, distance, visible
 
 
 class EncounterFlow:
     def __init__(self, game):
         self.game = game
         self.outdoors = {key: game.slots.near(Vector2(tile) * 32) for key, tile in OUTDOOR_POINTS.items()}
+        self.pins = {**game.slots.outdoor_clues}
+        for key, tile in {"trail_plaza": (106, 64), "trail_sports": (53, 54),
+                          "trail_materials": (61, 46)}.items():
+            self.pins[key] = game.slots.near(Vector2(tile) * 32)
+        self.pins["trail_dorm"] = self.pins["trail_residence"]
+
+    @property
+    def state(self):
+        return self.game.run_state
 
     def locations(self):
-        state = self.game.run_state
+        state = self.state
         if state.area == "campus":
             for key, event in state.encounters.items():
                 if key in self.outdoors:
@@ -34,101 +30,67 @@ class EncounterFlow:
             yield state.area, state.encounters[state.area], self.game.rooms[state.area].event_point
 
     def sync(self):
-        state = self.game.run_state
+        state = self.state
         for _, event, point in self.locations():
             if not event.available(state) or distance(point, state.position) > 480:
                 continue
             if event.actor_id not in state.actors:
-                state.actors[event.actor_id] = Actor(
-                    event.role, point, state.area, status="disguised" if event.motive == "mimic" else "waiting",
-                    identity=event.person,
-                )
-            if event.event == "stormfront" and not event.clock and distance(point, state.position) <= 84:
-                state.storm_until = max(state.storm_until, state.elapsed + 45)
+                state.actors[event.actor_id] = Actor(event.role, point, state.area, identity=event.person)
+            if event.event == "campus_rain" and not event.clock and distance(point, state.position) <= 84:
+                state.storm_until = max(state.storm_until, state.elapsed + 38)
                 event.clock = state.minute
-                self.game.notify("exp.rain_arrived")
 
     def targets(self):
-        state = self.game.run_state
+        state = self.state
         for key, event, point in self.locations():
             actor = state.actors.get(event.actor_id)
-            if event.available(state) and (actor is None or actor.status in ("waiting", "disguised")):
+            if event.available(state) and (actor is None or actor.status == "waiting"):
                 yield "encounter", key, point
 
     def encounter_for_actor(self, actor_id):
-        return next((event for event in self.game.run_state.encounters.values() if event.actor_id == actor_id), None)
+        actor_id = actor_id.removesuffix("_perimeter")
+        return next((event for event in self.state.encounters.values() if event.actor_id == actor_id), None)
 
-    def line(self, event):
-        state = self.game.run_state
-        if event.motive == "mimic" and state.heard_event:
-            return state.heard_event
-        return LINES[event.motive] + "." + str(event.person % 2)
+    def person_name(self, actor_id, event):
+        language = self.game.localizer.language
+        if actor_id.endswith("_perimeter"):
+            return NAMES[self.state.actors[actor_id].identity][int(language == "en")]
+        return event.name(language)
 
-    def title(self, event):
+    @staticmethod
+    def title(event):
         return f"encounter.{event.event}.title"
 
     def open(self, key):
-        game = self.game
-        state = game.run_state
-        event = state.encounters[key]
-        if not event.available(state):
+        event = self.state.encounters[key]
+        if not event.available(self.state):
             return
         self.sync()
         if not event.clock:
-            event.clock = state.minute
-        if event.status == "unseen":
-            event.status = "heard"
-        if event.activity == "storm":
-            state.storm_until = max(state.storm_until, state.elapsed + 45)
-        line = self.line(event)
-        if event.motive != "mimic":
-            state.heard_event, state.heard_voice = line, event.voice
-        game.show(self.title(event), f"encounter.{event.event}.text", self.options(key, event),
-                  speaker=event.name(game.localizer.language),
-                  quote="exp.voice." + line if event.motive == "mimic" else None)
+            event.clock = self.state.minute
+        event.status = "heard"
+        self.game.show(self.title(event), f"encounter.{event.event}.text", self.options(key, event),
+                       speaker=event.name(self.game.localizer.language))
 
     @staticmethod
     def options(key, event):
-        verbs = ("food", "water") if event.activity == "kit" else (CHOICES[event.activity],)
-        actions = [verb + "/" + key for verb in verbs]
-        if event.status != "checked":
-            actions.insert(0, "check/" + key)
-        actions.append("leave/" + key)
-        return tuple("event_" + action for action in actions)
+        return tuple(f"event_{option}/{key}" for option in EVENTS[event.event].get("choices", {}))
 
-    def inspect(self, key, event, person):
-        game = self.game
-        event.status = "checked"
-        detail = event.motive if event.motive in ("mimic", "selfish") else event.activity
-        game.show(self.title(event), "exp.inspect." + detail, self.options(key, event),
-                  speaker=event.name(game.localizer.language))
-        if person and event.motive == "mimic":
-            person.facing = "left" if event.person % 2 else "right"
+    def option_label(self, action):
+        number, key = action.removeprefix("event_").split("/", 1)
+        return self.game.tr(f"encounter.{self.state.encounters[key].event}.option_{number}")
 
     def resolve(self, action, key):
-        game = self.game
-        state = game.run_state
+        state = self.state
         event = state.encounters[key]
         person = state.actors.get(event.actor_id)
-        game.scene = "play"
-        if not event.available(state) or person is None or person.status not in ("waiting", "disguised"):
+        self.game.scene = "play"
+        if not event.available(state) or person is None or person.status != "waiting":
             return
-        if action == "check":
-            self.inspect(key, event, person)
+        choice = EVENTS[event.event].get("choices", {}).get(action)
+        if choice is None:
             return
-        if action == "leave":
-            return
-        if event.motive == "mimic":
-            if event.status == "checked":
-                # The actor is exposed, but the player still has time to move.
-                person.linger, person.cooldown = 2.2, 1.45
-            else:
-                person.linger, person.cooldown = .6, .75
-            person.status, person.kind, person.alerted = "turned", "mimic", 6
-            game.cue_scare("mimic")
-            self.finish(event, "lure", quote="exp.voice." + self.line(event))
-            return
-        result = self.apply(action, key, event, person)
+        result = self.apply(key, event, person, choice["operation"], choice.get("arg", ""))
         if result:
             self.finish(event, result)
 
@@ -137,120 +99,232 @@ class EncounterFlow:
         catalog = self.game.localizer.catalogs[self.game.localizer.language]
         return specific if "survival." + specific in catalog else "exp.result." + event.outcome
 
-    def finish(self, event, outcome, *, quote=None):
-        game = self.game
+    def finish(self, event, outcome):
         event.status, event.outcome = "resolved", outcome
-        game.show(self.title(event), self.result_key(event),
-                  speaker=event.name(game.localizer.language), quote=quote)
+        self.game.show(self.title(event), self.result_key(event), speaker=event.name(self.game.localizer.language))
 
-    def apply(self, action, key, event, person):
+    def set_pin(self, name):
+        self.state.event_progress["waypoint"] = ("campus", self.pins[name])
+
+    def waypoint(self):
+        progress = self.state.event_progress
+        if drop := progress.get("parcel_drop"):
+            return drop
+        mission = progress.get("mission")
+        return (mission["area"], mission["point"]) if mission else progress.get("waypoint")
+
+    def begin_task(self, key, event, kind, area, point, *, actor=None, limit=None, guard=None):
+        state = self.state
+        state.event_progress["mission"] = {
+            "key": key, "actor": actor or event.actor_id, "kind": kind, "area": area, "point": tuple(point),
+            "until": state.elapsed + limit if limit else None, "guard": guard,
+        }
+        state.event_progress.pop("waypoint", None)
+        return "task_" + kind
+
+    def followups(self):
+        progress = self.state.event_progress
+        mission = progress.get("mission")
+        drop = progress.get("parcel_drop")
+        if drop:
+            if drop[0] == self.state.area:
+                yield "event_point", "task_parcel_pickup", drop[1]
+            return
+        if mission and mission["area"] == self.state.area:
+            yield "event_point", "task_" + mission["kind"], mission["point"]
+
+    def drop_parcel(self):
+        state = self.state
+        if state.event_progress.pop("carrying_parcel", None):
+            state.event_progress["parcel_drop"] = (state.area, state.position)
+            self.game.notify("event.parcel_dropped")
+            return True
+        return False
+
+    def end_task(self, mission, outcome):
+        state = self.state
+        state.event_progress.pop("mission", None)
+        state.event_progress.pop("waypoint", None)
+        if mission["kind"] == "parcel":
+            state.event_progress.pop("carrying_parcel", None)
+            state.event_progress.pop("parcel_drop", None)
+        event = state.encounters[mission["key"]]
+        event.outcome = outcome
+        self.game.notify(self.result_key(event))
+
+    def advance(self):
+        state = self.state
+        mission = state.event_progress.get("mission")
+        if not mission:
+            return False
+        person = state.actors.get(mission["actor"])
+        unavailable = (mission["kind"] in ("lawn", "rescue_bat", "rescue_detour", "care", "outdoor_escort")
+                       and (not person or person.status in ("turned", "gone")))
+        if person and mission["kind"].startswith("rescue") and person.status == "bitten":
+            unavailable = True
+        expired = mission["until"] is not None and state.elapsed >= mission["until"]
+        if expired or unavailable:
+            if expired and person and person.status == "waiting" and mission["kind"].startswith("rescue"):
+                person.status = "turned"
+                person.kind = "hunter"
+            self.end_task(mission, "task_missed")
+            return True
+        return False
+
+    def complete(self, key):
+        state = self.state
+        mission = state.event_progress.get("mission")
+        if not mission or self.advance():
+            return
+        kind = mission["kind"]
+        actor = state.actors.get(mission["actor"])
+        if kind == "parcel":
+            if key == "task_parcel_pickup":
+                state.event_progress.pop("parcel_drop", None)
+                state.event_progress["carrying_parcel"] = True
+                self.game.notify("exp.result.task_parcel")
+                return
+            state.add_gear("food")
+            outcome = "parcel_delivered"
+        elif kind == "wrong_list":
+            mission.update(kind="right_list", point=tuple(self.pins["trail_clock"]))
+            state.encounters[mission["key"]].outcome = "list_wrong"
+            self.game.notify("exp.result.list_wrong")
+            return
+        elif kind == "right_list":
+            outcome = "list_confirmed"
+        elif kind == "care":
+            actor.choice = "separate"
+            actor.status = "gone"
+            self.end_task(mission, "bite_settled")
+            self.set_pin("trail_residence")
+            return
+        elif kind in ("lawn", "outdoor_escort"):
+            if actor.status != "joined" or actor.area != state.area or distance(actor.position, state.position) > 110:
+                self.game.notify("event.wait_for_person")
+                return
+            slow_route = actor.choice == "lawn_slow"
+            actor.choice = "join"
+            outcome = "lawn_safe" if slow_route else "lawn_done" if kind == "lawn" else "escort_complete"
+            if slow_route:
+                self.end_task(mission, outcome)
+                self.set_pin("trail_plaza")
+                return
+        else:
+            guard = state.actors.get(mission["guard"])
+            if kind == "rescue_bat" and guard and not guard.stunned:
+                self.game.notify("event.stun_guard_first")
+                return
+            if len(state.team) >= 2:
+                self.game.notify("event.team_full")
+                return
+            actor.status, actor.choice = "joined", "join"
+            outcome = "rescue_done"
+        self.end_task(mission, outcome)
+
+    def apply(self, key, event, person, action, arg):
+        state = self.state
         game = self.game
-        state = game.run_state
-        pack = state.pack
-        selfish = event.motive == "selfish" and event.status != "checked"
-        if action in ("food", "water"):
-            state.add_gear(action)
-            return "kit_" + action
-        if action == "barricade":
-            state.latched[state.area] = state.elapsed + (50 if event.status == "checked" else 29)
-            return "barred"
-        if action == "divert":
-            state.lure_area = state.area
-            state.lure_point = person.position
-            state.lure_until = state.elapsed + (18 if event.status == "checked" else 10)
-            game.sound("call")
-            return "divert"
-        if action == "escort":
+        if action in ("recruit", "escort", "lawn_fast", "lawn_slow", "bite_keep", "bite_care"):
             if len(state.team) >= 2:
                 game.notify("event.team_full")
                 return None
-            person.status, person.choice = "joined", "escort"
-            return "escort"
-        if action == "recover":
-            if event.status != "checked":
-                state.elapsed += MINUTE_SECONDS
-                state.thirst = max(1, state.thirst - 3)
-            if selfish:
-                person.status = "gone"
-                return "recover_taken"
-            state.add_gear(EVENTS[event.event]["reward"])
-            return "recover"
-        if action == "warn":
-            if event.status == "checked":
-                state.add_gear("water")
-                return "warning_quiet"
-            listeners = [
-                enemy for enemy in state.actors.values()
-                if enemy.infected and enemy.status not in ("dormant", "gone") and enemy.area == state.area
-                and distance(enemy.position, person.position) <= 275
-            ]
-            for enemy in listeners:
-                enemy.alerted = max(enemy.alerted, 6)
-            return "warning_loud" if listeners else "warning_unanswered"
-        if action == "exchange":
-            given, reward = ("food", "water") if event.event == "last_water" else ("water", "cell")
-            if not pack[given]:
-                game.notify("exp.missing", item=game.tr("gear." + given))
+        if action in ("parcel", "list_walk", "list_check", "lawn_fast", "lawn_slow", "bite_care",
+                      "rescue_bat", "rescue_detour") or (action == "escort" and state.area == "campus"):
+            if "mission" in state.event_progress:
+                game.notify("event.finish_existing_task")
                 return None
-            pack[given] -= 1
-            if selfish:
-                person.status = "gone"
-                return "taken"
-            state.add_gear(reward)
-            return "exchange_water" if reward == "water" else "exchange_cell"
-        if action == "lend_light":
-            if not pack["lamp"] or state.battery < 12:
-                game.notify("exp.need_light")
+        if action in ("trade", "rest_cost"):
+            spend, _, receive = arg.partition(":")
+            if not state.pack[spend]:
+                game.notify("exp.missing", item=game.tr("gear." + spend))
                 return None
-            state.battery -= 12
-            state.lamp_on = state.lamp_on and state.battery > 0
-            if selfish:
+            state.pack[spend] -= 1
+            if receive:
+                state.add_gear(receive)
+                return "exchange_water" if receive == "water" else "exchange_food"
+            state.stamina = min(100, state.stamina + 35)
+            return "rest_traded"
+        if action in ("mark", "mark_cost", "effort_mark", "work", "effort"):
+            if action != "mark":
+                cost, arg = arg.split(":")
+                cost = int(cost)
+                if action.startswith("effort"):
+                    if state.stamina < cost:
+                        game.notify("event.too_tired")
+                        return None
+                    state.stamina -= cost
+                else:
+                    state.spend_time(cost)
+            if action in ("mark", "mark_cost", "effort_mark"):
+                self.set_pin(arg)
+                return "route_marked"
+            state.add_gear(arg)
+            return "work_water" if arg == "water" else "work_food"
+        if action == "shelter":
+            state.spend_time(12)
+            state.stamina = min(100, state.stamina + 50)
+            return "rested"
+        if action == "evacuate":
+            state.spend_time(int(arg))
+            person.status = "gone"
+            return "evacuated"
+        if action in ("recruit", "escort"):
+            person.status, person.choice = "joined", "join" if action == "recruit" else "escort"
+            if action == "escort" and state.area == "campus":
+                person.choice = "join"
+                return self.begin_task(key, event, "outdoor_escort", "campus",
+                                       self.pins["trail_residence"], limit=55)
+            return "escort" if action == "escort" else "joined"
+        if action == "parcel":
+            state.event_progress["carrying_parcel"] = True
+            return self.begin_task(key, event, "parcel", state.area, game.slots.event_points[state.area][1])
+        if action.startswith("list_"):
+            if action == "list_check":
+                state.spend_time(MINUTE_SECONDS)
+                return self.begin_task(key, event, "right_list", "campus", self.pins["trail_clock"])
+            return self.begin_task(key, event, "wrong_list", "campus", self.pins["trail_library"])
+        if action.startswith("lawn_"):
+            fast = action == "lawn_fast"
+            if not fast:
+                other_id = event.actor_id + "_perimeter"
+                state.actors[other_id] = Actor("graduate", person.position, "campus",
+                                                identity=(person.identity+1) % len(NAMES))
                 person.status = "gone"
-                return "left_with_light"
-            state.add_gear("cell")
-            return "light"
-        if action == "offer_water":
-            if not pack["water"]:
-                game.notify("event.no_water")
-                return None
-            pack["water"] -= 1
-            if event.activity == "shelter" and len(state.team) < 2 and not selfish:
-                person.status, person.choice = "joined", "join"
-                return "shelter"
-            if not selfish:
-                state.add_gear("food")
-                return "share"
-            return "taken"
-        if action == "wait_here":
-            state.elapsed += 2 * MINUTE_SECONDS
-            state.hunger = max(1, state.hunger - 3)
-            state.thirst = max(1, state.thirst - 4)
-            if event.activity == "storm":
-                state.storm_until = state.elapsed
-                return "storm"
-            if event.motive == "panicked":
-                person.status = "gone"
-                return "wait_empty"
-            state.add_gear("water")
-            return "wait_help"
-        if action == "take_route":
-            if key in game.slots.side_exits and key not in state.shortcuts:
-                state.shortcuts.append(key)
-                return "route"
-            return "information"
-        if action in ("invite", "entrust"):
+                person = state.actors[other_id]
+            else:
+                other_id = event.actor_id
+            person.status, person.choice = "joined", "lawn_fast" if fast else "lawn_slow"
+            point = self.game.slots.near(Vector2((118, 62) if fast else (131, 65)) * 32)
+            return self.begin_task(key, event, "lawn", "campus", point, actor=other_id, limit=40 if fast else 52)
+        if action.startswith("rescue_"):
             if len(state.team) >= 2:
                 game.notify("event.team_full")
                 return None
-            if action == "entrust":
-                if not pack["water"]:
-                    game.notify("event.no_water")
-                    return None
-                pack["water"] -= 1
-                person.carried = event.motive == "selfish"
-            person.status, person.choice = "joined", "trust" if action == "entrust" else "join"
-            return "custody" if action == "entrust" else "joined"
-        if action == "approach" and event.motive == "panicked":
-            state.elapsed += MINUTE_SECONDS
-            return "panicked"
-        return "information"
+            if action == "rescue_bat" and not state.pack["bat"]:
+                game.notify("event.empty_bat")
+                return None
+            near, far = game.slots.event_points[state.area]
+            person.position = tuple(near if action == "rescue_bat" else far)
+            guard_id = event.actor_id + "_guard"
+            guard_point = near
+            if action == "rescue_bat":
+                hit = game.rooms[state.area].hit
+                targets = [Vector2(near) + shift for shift in ((42, 0), (-42, 0), (0, 42), (0, -42))]
+                guard_point = next((point for point in targets if not hit(body(point)) and visible(point, near, hit)), near)
+            state.actors[guard_id] = Actor("hunter", tuple(guard_point),
+                                           state.area, status="hostile")
+            return self.begin_task(key, event, action, state.area, person.position,
+                                   limit=27 if action == "rescue_bat" else 32, guard=guard_id)
+        if action.startswith("bite_"):
+            if action == "bite_leave":
+                person.status = "gone"
+                return "bite_left"
+            person.status, person.choice = "bitten", "join"
+            person.infection = INFECTION_SECONDS
+            if action == "bite_care":
+                # The nearby rest point is reachable during the short infection window.
+                return self.begin_task(key, event, "care", state.area, game.slots.rest_points[state.area],
+                                       limit=INFECTION_SECONDS)
+            return "bite_risk"
+        return None

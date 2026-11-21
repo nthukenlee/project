@@ -7,10 +7,11 @@ from random import Random
 from .constants import DATA_DIR
 
 DATA = json.loads((DATA_DIR / "expedition_events.json").read_text(encoding="utf-8"))
-ROOM_EVENTS = {key: tuple(events) for key, events in DATA["rooms"].items()}
-OUTDOOR_POINTS = DATA["outdoor"]
+DECISIONS = json.loads((DATA_DIR / "campus_decisions.json").read_text(encoding="utf-8"))
+ROOM_EVENTS = {key: tuple(events) for key, events in DECISIONS["rooms"].items()}
+OUTDOOR_POINTS = DECISIONS["outdoor"]
 OUTDOOR_CLUES = DATA["outdoor_clues"]
-EVENTS = DATA["events"]
+EVENTS = {**DATA["events"], **DECISIONS["events"]}
 MAIN_STEPS = ("manifest", "echo_log", "lock_log", "sealed")
 EXTRA_CLUES = ("marked_map", "arrival_times", "relay_tags", "empty_case", "torn_route", "return_tally")
 STORY_STEPS = MAIN_STEPS + EXTRA_CLUES
@@ -141,7 +142,8 @@ class Encounter:
 
 def choose_events(seed, previous=None):
     rng = Random("campus-events/" + str(seed))
-    existing = dict(previous or {})
+    existing = {key: event for key, event in (previous or {}).items()
+                if event.event in DECISIONS["events"] or event.status == "resolved"}
     assignments = {}
     types = Counter(event.activity for event in existing.values())
     rooms = list(ROOM_EVENTS)
@@ -164,5 +166,6 @@ def choose_events(seed, previous=None):
     rng.shuffle(available)
     for key, event in assignments.items():
         if key not in existing:
-            existing[key] = Encounter(event, rng.choice(EVENTS[event]["roles"]), available.pop())
+            person = available.pop() if available else rng.randrange(len(NAMES))
+            existing[key] = Encounter(event, rng.choice(EVENTS[event]["roles"]), person)
     return existing

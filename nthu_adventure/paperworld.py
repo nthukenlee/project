@@ -92,6 +92,9 @@ class Characters:
             "armored": (1.39, 1.09, (104, 135, 126), 5, 1),
             "crawler": (1.66, .61, (137, 104, 143), 3, 1),
             "brute": (1.77, 1.32, (121, 104, 97), 2, 1),
+            "hidden": (1.12, .78, (102, 115, 94), 5, 0),
+            "stalker": (.86, 1.18, (99, 91, 121), 4, 3),
+            "thrower": (1.31, 1.07, (151, 121, 75), 2, 0),
         }
         sx, sy, tint, shirt, hair = proportions.get(variant, proportions["wanderer"])
         base = self.sprite(facing, frame, {"shirt": shirt, "hair_color": hair})
@@ -125,6 +128,13 @@ class Characters:
             elbow = (center + 13*edge, 33)
             pygame.draw.lines(sprite, (82, 73, 57), False, ((center + 4*edge, 22), elbow,
                               (center + (14 + frame)*edge, 40)), 4)
+        if variant == "thrower":
+            hand = (center + 14*edge, 8 if windup else 38)
+            pygame.draw.lines(sprite, (104, 82, 51), False, ((center+4*edge, 24),
+                              (center+12*edge, 20 if windup else 32), hand), 5)
+            pygame.draw.circle(sprite, (166, 144, 103), hand, 3)
+        if variant == "stalker":
+            pygame.draw.lines(sprite, (63, 56, 78), False, ((center-5, 9), (center, 5), (center+5, 9)), 3)
         if variant == "caller":
             pygame.draw.arc(sprite, (176, 128, 76), (center-5, 13, 11, 12), math.pi, math.tau, 2)
         elif variant in ("brute", "crawler", "armored"):
@@ -149,6 +159,13 @@ class Characters:
         sprite = self.zombie_frames[key]
         x, y = map(round, position)
         target.blit(self.shadow, self.shadow.get_rect(center=(x, y)))
+        if getattr(enemy, "concealed", False):
+            sprite = pygame.transform.smoothscale(sprite, (sprite.get_width()+7, max(13, sprite.get_height()//3)))
+        elif getattr(enemy, "stunned", 0):
+            sprite = pygame.transform.rotozoom(sprite, -25, 1)
+        elif getattr(enemy, "reveal", 0):
+            rise = 1 - min(.55, enemy.reveal * .78)
+            sprite = pygame.transform.smoothscale(sprite, (sprite.get_width(), round(sprite.get_height()*rise)))
         if enemy.chasing or enemy.windup:
             ring = (219, 106, 79) if enemy.windup else (142, 103, 76)
             pygame.draw.ellipse(target, ring, (x - 22, y - 6, 44, 13), 2)

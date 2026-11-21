@@ -1,0 +1,976 @@
+{
+  "rooms": {
+    "education": [
+      "attendance",
+      "chair_path"
+    ],
+    "main_library": [
+      "evacuation_list",
+      "return_lane"
+    ],
+    "xin_hall": [
+      "hidden_bite",
+      "roster_help"
+    ],
+    "general_2": [
+      "classroom_route"
+    ],
+    "general_3": [
+      "rearranged_desks"
+    ],
+    "general_4": [
+      "parcel_shift",
+      "window_manifest"
+    ],
+    "engineering_1": [
+      "open_locker"
+    ],
+    "physics": [
+      "marked_cases"
+    ],
+    "chemistry": [
+      "spill_plan"
+    ],
+    "gym": [
+      "trapped_stands",
+      "team_bench"
+    ],
+    "dining_hall": [
+      "cold_counter"
+    ],
+    "ren_hall": [
+      "shifts"
+    ],
+    "shi_hall": [
+      "bottles_bin"
+    ],
+    "li_hall": [
+      "rest_mat"
+    ],
+    "yi_hall": [
+      "missing_custodian"
+    ],
+    "admin_hall": [
+      "dispatch_copy"
+    ],
+    "engineering_2": [
+      "stuck_trolley"
+    ],
+    "computer_science": [
+      "index_cards"
+    ],
+    "student_center": [
+      "stalls_cleanup"
+    ],
+    "humanities_building": [
+      "exhibit_record"
+    ]
+  },
+  "outdoor": {
+    "lawn_split": [
+      124,
+      56
+    ],
+    "stairs_trade": [
+      105,
+      63
+    ],
+    "lake_detour": [
+      94,
+      86
+    ],
+    "gate_partner": [
+      137,
+      45
+    ],
+    "clock_roll": [
+      111,
+      71
+    ],
+    "dorm_sack": [
+      100,
+      101
+    ],
+    "puddle_pack": [
+      113,
+      76
+    ],
+    "sport_path": [
+      64,
+      60
+    ],
+    "road_hold": [
+      94,
+      81
+    ],
+    "campus_rain": [
+      118,
+      72
+    ],
+    "service_load": [
+      131,
+      68
+    ],
+    "plaza_exchange": [
+      105,
+      67
+    ],
+    "shore_wait": [
+      99,
+      89
+    ],
+    "south_note": [
+      105,
+      111
+    ],
+    "split_track": [
+      97,
+      107
+    ],
+    "white_fabric": [
+      119,
+      57
+    ]
+  },
+  "events": {
+    "attendance": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_clock"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "10:food"
+        }
+      }
+    },
+    "evacuation_list": {
+      "activity": "list_check",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "17:51",
+      "choices": {
+        "1": {
+          "operation": "list_check"
+        },
+        "2": {
+          "operation": "list_walk"
+        }
+      }
+    },
+    "hidden_bite": {
+      "activity": "bite_leave",
+      "roles": [
+        "resident",
+        "reader",
+        "student"
+      ],
+      "after": "18:08",
+      "choices": {
+        "1": {
+          "operation": "bite_leave"
+        },
+        "2": {
+          "operation": "bite_care"
+        },
+        "3": {
+          "operation": "bite_keep"
+        }
+      }
+    },
+    "classroom_route": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_clock"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "13:water"
+        }
+      }
+    },
+    "rearranged_desks": {
+      "activity": "evacuate",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "evacuate",
+          "arg": "12"
+        },
+        "2": {
+          "operation": "mark",
+          "arg": "trail_plaza"
+        }
+      }
+    },
+    "parcel_shift": {
+      "activity": "trade",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "before": "18:24",
+      "choices": {
+        "1": {
+          "operation": "trade",
+          "arg": "food:water"
+        },
+        "2": {
+          "operation": "parcel"
+        }
+      }
+    },
+    "open_locker": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "7:water"
+        },
+        "2": {
+          "operation": "mark_cost",
+          "arg": "11:trail_materials"
+        }
+      }
+    },
+    "marked_cases": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "13:food"
+        },
+        "2": {
+          "operation": "escort"
+        }
+      }
+    },
+    "spill_plan": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "15:water"
+        },
+        "2": {
+          "operation": "shelter"
+        }
+      }
+    },
+    "trapped_stands": {
+      "activity": "rescue_bat",
+      "roles": [
+        "student",
+        "teammate",
+        "aide"
+      ],
+      "after": "17:54",
+      "choices": {
+        "1": {
+          "operation": "rescue_bat"
+        },
+        "2": {
+          "operation": "rescue_detour"
+        }
+      }
+    },
+    "cold_counter": {
+      "activity": "trade",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "trade",
+          "arg": "water:food"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "17:food"
+        }
+      }
+    },
+    "shifts": {
+      "activity": "recruit",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "recruit"
+        },
+        "2": {
+          "operation": "mark_cost",
+          "arg": "6:trail_dorm"
+        }
+      }
+    },
+    "bottles_bin": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "11:water"
+        },
+        "2": {
+          "operation": "shelter"
+        }
+      }
+    },
+    "rest_mat": {
+      "activity": "rest_cost",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "rest_cost",
+          "arg": "food"
+        },
+        "2": {
+          "operation": "shelter"
+        }
+      }
+    },
+    "missing_custodian": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_dorm"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "9:food"
+        }
+      }
+    },
+    "dispatch_copy": {
+      "activity": "mark_cost",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark_cost",
+          "arg": "13:trail_plaza"
+        },
+        "2": {
+          "operation": "escort"
+        }
+      }
+    },
+    "stuck_trolley": {
+      "activity": "shelter",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "shelter"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "8:water"
+        }
+      }
+    },
+    "index_cards": {
+      "activity": "mark_cost",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark_cost",
+          "arg": "10:trail_library"
+        },
+        "2": {
+          "operation": "trade",
+          "arg": "food:water"
+        }
+      }
+    },
+    "stalls_cleanup": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "12:food"
+        },
+        "2": {
+          "operation": "evacuate",
+          "arg": "10"
+        }
+      }
+    },
+    "exhibit_record": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_lake"
+        },
+        "2": {
+          "operation": "escort"
+        }
+      }
+    },
+    "chair_path": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "14:food"
+        },
+        "2": {
+          "operation": "shelter"
+        }
+      }
+    },
+    "return_lane": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "17:50",
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_library"
+        },
+        "2": {
+          "operation": "recruit"
+        }
+      }
+    },
+    "roster_help": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "18:00",
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_dorm"
+        },
+        "2": {
+          "operation": "trade",
+          "arg": "water:food"
+        }
+      }
+    },
+    "window_manifest": {
+      "activity": "escort",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "escort"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "15:water"
+        }
+      }
+    },
+    "team_bench": {
+      "activity": "shelter",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "shelter"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "12:water"
+        }
+      }
+    },
+    "lawn_split": {
+      "activity": "lawn_fast",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "before": "18:12",
+      "choices": {
+        "1": {
+          "operation": "lawn_fast"
+        },
+        "2": {
+          "operation": "lawn_slow"
+        }
+      }
+    },
+    "stairs_trade": {
+      "activity": "trade",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "trade",
+          "arg": "food:water"
+        },
+        "2": {
+          "operation": "recruit"
+        }
+      }
+    },
+    "lake_detour": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_lake"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "13:water"
+        }
+      }
+    },
+    "gate_partner": {
+      "activity": "recruit",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "recruit"
+        },
+        "2": {
+          "operation": "mark",
+          "arg": "trail_plaza"
+        }
+      }
+    },
+    "clock_roll": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_clock"
+        },
+        "2": {
+          "operation": "recruit"
+        }
+      }
+    },
+    "dorm_sack": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "14:food"
+        },
+        "2": {
+          "operation": "shelter"
+        }
+      }
+    },
+    "puddle_pack": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "17:50",
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "17:water"
+        },
+        "2": {
+          "operation": "effort",
+          "arg": "25:water"
+        }
+      }
+    },
+    "sport_path": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_sports"
+        },
+        "2": {
+          "operation": "work",
+          "arg": "16:water"
+        }
+      }
+    },
+    "road_hold": {
+      "activity": "mark",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark",
+          "arg": "trail_lake"
+        },
+        "2": {
+          "operation": "recruit"
+        }
+      }
+    },
+    "campus_rain": {
+      "activity": "shelter",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "17:49",
+      "choices": {
+        "1": {
+          "operation": "shelter"
+        },
+        "2": {
+          "operation": "effort_mark",
+          "arg": "20:trail_plaza"
+        }
+      }
+    },
+    "service_load": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "16:water"
+        },
+        "2": {
+          "operation": "mark",
+          "arg": "trail_materials"
+        }
+      }
+    },
+    "plaza_exchange": {
+      "activity": "trade",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "trade",
+          "arg": "water:food"
+        },
+        "2": {
+          "operation": "mark_cost",
+          "arg": "12:trail_plaza"
+        }
+      }
+    },
+    "shore_wait": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "18:04",
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "10:food"
+        },
+        "2": {
+          "operation": "mark",
+          "arg": "trail_lake"
+        }
+      }
+    },
+    "south_note": {
+      "activity": "work",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "after": "18:10",
+      "choices": {
+        "1": {
+          "operation": "work",
+          "arg": "18:food"
+        },
+        "2": {
+          "operation": "recruit"
+        }
+      }
+    },
+    "split_track": {
+      "activity": "escort",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "escort"
+        },
+        "2": {
+          "operation": "mark",
+          "arg": "trail_dorm"
+        }
+      }
+    },
+    "white_fabric": {
+      "activity": "mark_cost",
+      "roles": [
+        "student",
+        "worker",
+        "guard",
+        "reader",
+        "graduate",
+        "aide"
+      ],
+      "choices": {
+        "1": {
+          "operation": "mark_cost",
+          "arg": "8:trail_library"
+        },
+        "2": {
+          "operation": "shelter"
+        }
+      }
+    }
+  }
+}

@@ -28,7 +28,6 @@ SIZE = pygame.Rect((0, 0), WINDOW_SIZE)
 NAME_BOX = pygame.Rect(570, 236, 422, 57)
 NAME_LIMIT = 12
 MAP_PAGE_SIZE = 8
-LAMP_REACH = 310
 NIGHT_VISION = 146
 INK = (23, 33, 34)
 PANEL = (30, 43, 43)
@@ -40,28 +39,6 @@ BLUE = (114, 181, 197)
 INTRO_BEATS = (0, 8, 16, 25, 33, 40)
 QUICK_KEYS = (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6)
 PALETTE = ((219,157,111), (106,172,198), (190,139,86), (232,192,105), (150,169,151), (156,173,146))
-
-
-def flashlight_shadows():
-    """Create a black overlay with a soft pool and directional beam cut out."""
-    reach = LAMP_REACH
-    diameter = reach * 2 + 1
-    east = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-    east.fill((13, 26, 41, 210))
-    for y in range(-151, 152):
-        for x in range(-78, reach):
-            falloff = math.hypot(x, y)
-            pool = max(0, min(1, (78 - falloff) / 41))
-            beam = min(1, (reach - falloff) / 92, (x + 8) / 38, (21 + x * .46 - abs(y)) / 25)
-            strength = max(pool, beam)
-            if strength > 0:
-                east.set_at((x + reach, y + reach), (13, 26, 41, round(210 - 188 * strength)))
-    return {
-        "right": east,
-        "up": pygame.transform.rotate(east, 90),
-        "left": pygame.transform.rotate(east, 180),
-        "down": pygame.transform.rotate(east, 270),
-    }
 
 
 class Game:
@@ -79,7 +56,6 @@ class Game:
         pygame.key.stop_text_input()
         self.canvas = pygame.Surface(WINDOW_SIZE)
         self.overlay = pygame.Surface(WINDOW_SIZE, pygame.SRCALPHA)
-        self.lamp_shadows = None
         self.night_pool = None
         self.pending_scare = None
         self.scare_kind = None
@@ -94,6 +70,7 @@ class Game:
         if self.resume_run:
             self.slots.restore_supplies(self.resume_run)
             self.slots.restore_mutations(self.resume_run)
+            self.slots.restore_access(self.resume_run)
         self.encounters = EncounterFlow(self)
         self.world_map_bounds = pygame.Rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
         self.building_entrances = {key: self.world.door(building) for key, building in CAMPUS_BUILDINGS.items()}
@@ -303,12 +280,15 @@ class Game:
         elif scene == "play":
             if key in (pygame.K_e, pygame.K_RETURN):
                 self.interact()
-            elif key in QUICK_KEYS:
+            elif key in QUICK_KEYS[:len(GEAR)]:
                 self.run_state.selected = QUICK_KEYS.index(key)
             elif key == pygame.K_SPACE:
                 self.use(self.run_state.selected)
             elif key == pygame.K_b:
                 self.use(GEAR.index("bike"))
+            elif key == pygame.K_g and not self.run_state.infection_until:
+                if self.encounters.drop_parcel():
+                    self.store.save(self.run_state)
             elif key in (pygame.K_q, pygame.K_m, pygame.K_ESCAPE):
                 if key == pygame.K_m and self.persistent_hint:
                     self.toast = ""
@@ -456,12 +436,10 @@ class Game:
                 self.cue_scare(event.split("/", 1)[1])
             elif event in ("warning", "call"):
                 self.sound(event)
-            elif event == "mimic_wait":
-                if pygame.time.get_ticks() >= self.outbreak_cue_until:
-                    self.notify("exp.mimic_nearby")
-                    self.outbreak_cue_until = pygame.time.get_ticks() + 10000
             else:
                 self.notify("event." + event)
+        if not state.infection_until and self.encounters.advance():
+            self.store.save(state)
         if self.pending_scare and self.profile.scares and state.elapsed >= self.scare_ready:
             self.scare_kind, self.pending_scare = self.pending_scare, None
             self.scare_time, self.scare_ready = .70, state.elapsed + 14.
@@ -536,15 +514,16 @@ class Game:
                 if actor.area == area and actor.status == "joined" and actor.choice == "escort":
                     actor.status = "gone"
                     event = self.encounters.encounter_for_actor(key)
-                    event.outcome = "escort_complete"
-                    state.add_gear("water")
-                    self.notify("event.escort_complete")
+                    if event:
+                        event.outcome = "escort_complete"
         if group:
             self.notify("event.door_rattle")
             self.sound("warning")
         self.encounters.sync()
 
     def use(self, index):
+        if self.run_state.infection_until:
+            return
         item = GEAR[index]
         tick = pygame.time.get_ticks()
         if item == "bat" and tick < self.bat_at:
@@ -564,8 +543,6 @@ class Game:
             return state.outbreak and state.area == goal_area and key == state.goal and not state.ending
         if key == "mimic":
             return state.outbreak
-        if key == "side_exit":
-            return state.area in state.shortcuts
         if key == "room_detail":
             return not any(self.encounters.targets())
         return True
@@ -575,6 +552,8 @@ class Game:
         if run.area == "campus":
             for key, coord in self.slots.doors.items():
                 yield "door", key, coord
+            for key, coord in self.slots.side_exits.items():
+                yield "door", key + "/side", coord
             yield "fixture", "lawn", self.slots.lawn
             if run.goal_area in self.slots.outdoor_clues and self.fixture_is_available(run.goal):
                 yield "fixture", run.goal, self.slots.outdoor_clues[run.goal_area]
@@ -582,9 +561,12 @@ class Game:
             room = self.rooms[run.area]
             for fixture in room.fixtures:
                 yield "fixture", fixture.key, fixture.point
+            if run.area in self.slots.side_entries and not any(f.key == "side_exit" for f in room.fixtures):
+                yield "fixture", "side_exit", self.slots.side_entries[run.area]
             if self.fixture_is_available(run.goal):
                 yield "fixture", run.goal, room.story_point
         yield from self.encounters.targets()
+        yield from self.encounters.followups()
         for cache in run.caches:
             if cache.area == run.area and not cache.taken:
                 yield "cache", cache.id, cache.position
@@ -593,8 +575,13 @@ class Game:
                 continue
             if not npc.infected:
                 yield "actor", key, npc.position
-            elif npc.kind == "mimic" and not npc.chasing and not npc.windup:
-                yield "fixture", "lure-"+key, npc.position
+
+    def blocked_door(self, gate):
+        area, _, side = gate.partition("/")
+        outdoors = self.slots.side_exits[area] if side else self.slots.doors[area]
+        return any(actor.guard_door == gate and actor.status == "hostile" and not actor.stunned
+                   and actor.area == "campus" and distance(outdoors, actor.position) < 51
+                   for actor in self.run_state.actors.values())
 
     def nearest(self):
         current = self.run_state.position
@@ -603,12 +590,21 @@ class Game:
              if self.fixture_is_available(candidate[1])
              and distance(current, candidate[2]) <= (143 if candidate[1].startswith("lure-") else 63 if candidate[0] == "door" else 46)
              and visible(current, candidate[2], self.collides)),
-            key=lambda candidate: distance(current, candidate[2]), default=None,
+            key=lambda candidate: (distance(current, candidate[2]), candidate[0] != "event_point"),
+            default=None,
         )
 
     def label(self, kind, key):
         if kind == "door":
-            return self.tr("location." + key) if key in STORY_ROOMS else self.campus_name(key)
+            area, _, side = key.partition("/")
+            place = self.campus_name(area)
+            if self.blocked_door(key):
+                return self.tr("event.door_blocked")
+            if area in self.run_state.locked:
+                return self.tr("fixture.locked_door", place=place)
+            return self.tr("fixture.side_door", place=place) if side else place
+        if kind == "event_point":
+            return self.tr("fixture." + key)
         if kind == "encounter":
             return self.tr(self.encounters.title(self.run_state.encounters[key]))
         if kind == "actor":
@@ -617,7 +613,13 @@ class Game:
             key = "mimic"
         if kind == "cache":
             cache = next(cache for cache in self.run_state.caches if cache.id == key)
+            if cache.item == "bike":
+                return self.tr("fixture.unlock_bike")
             return self.tr("fixture.search_" + cache.container)
+        if key in ("exit", "side_exit"):
+            gate = self.run_state.area + ("/side" if key == "side_exit" else "")
+            if self.blocked_door(gate):
+                return self.tr("event.door_blocked")
         return self.tr(f"{kind}.{key}")
 
     def show(self, title, text, options=(), *, speaker="", quote=None, **values):
@@ -630,21 +632,39 @@ class Game:
 
     def actor_name(self, key):
         event = self.encounters.encounter_for_actor(key) if key.startswith("enc_") else None
-        return event.name(self.localizer.language) if event else self.tr("actor." + key)
+        return self.encounters.person_name(key, event) if event else self.tr("actor." + key)
 
     def interact(self):
+        if self.run_state.infection_until:
+            return
         match = self.nearest()
         if not match:
             return
-        kind, key, _ = match
+        kind, key, spot = match
         state = self.run_state
         if kind == "door":
-            room = self.rooms[key]
-            self.travel(key, self.slots.doors[key], room.entry, room.hit, key)
+            area, _, side = key.partition("/")
+            if self.blocked_door(key):
+                self.notify("event.door_blocked")
+                return
+            if area in state.locked:
+                if not state.pack["key"]:
+                    self.notify("event.need_key")
+                    return
+                state.locked.remove(area)
+                self.notify("event.unlocked_door")
+            room = self.rooms[area]
+            destination = self.slots.side_entries[area] if side else room.entry
+            self.travel(area, spot, destination, room.hit, key)
         elif kind == "encounter":
             self.encounters.open(key)
+        elif kind == "event_point":
+            self.encounters.complete(key)
         elif kind == "cache":
             cache = next(cache for cache in state.caches if cache.id == key)
+            if cache.item == "bike" and not state.pack["key"]:
+                self.notify("event.need_key")
+                return
             cache.taken = True
             if cache.item:
                 state.add_gear(cache.item)
@@ -656,8 +676,12 @@ class Game:
             self.talk(key)
         elif key in ("exit", "side_exit"):
             outside = self.slots.side_exits[state.area] if key == "side_exit" else self.slots.doors[state.area]
+            gate = state.area + ("/side" if key == "side_exit" else "")
+            if self.blocked_door(gate):
+                self.notify("event.door_blocked")
+                return
             self.travel("campus", match[2], outside, self.world.collides,
-                        state.area + "/side" if key == "side_exit" else state.area)
+                        gate)
         else:
             self.read_fixture(key)
         self.store.save(state)
@@ -712,8 +736,8 @@ class Game:
             state.observe("lock_log")
             if action == "story_search_report":
                 state.spend_time(MINUTE_SECONDS * 2)
-                state.add_gear("cell")
-                self.notify("event.found", item=self.tr("gear.cell"))
+                state.add_gear("water")
+                self.notify("event.found", item=self.tr("gear.water"))
             else:
                 self.notify("route.marked", place=self.campus_name(state.goal_area))
 
@@ -729,8 +753,7 @@ class Game:
             event = self.encounters.encounter_for_actor(key)
             options = ("separate/"+key, "leave") if npc.status == "bitten" else ("share/"+key, "leave")
             self.show("exp.companion", "read.bitten" if npc.status == "bitten" else "read.joined", options,
-                      speaker=event.name(self.localizer.language),
-                      quote="exp.voice.plead.1" if npc.status == "bitten" else "exp.voice.cooperate.1")
+                      speaker=self.encounters.person_name(key, event))
             return
         if npc.status == "bitten":
             self.show("actor."+key, "read.bitten", ("separate/"+key, "leave"))
@@ -794,11 +817,11 @@ class Game:
             clerk = state.actors["clerk"]
             if clerk.choice == "traded":
                 self.notify("event.traded_already")
-            elif not state.pack["water"]:
-                self.notify("event.no_water")
+            elif not state.pack["food"]:
+                self.notify("exp.missing", item=self.tr("gear.food"))
             else:
-                state.pack["water"] -= 1
-                state.add_gear("cell")
+                state.pack["food"] -= 1
+                state.add_gear("water")
                 clerk.choice = "traded"
                 self.notify("event.traded")
         elif action == "test_voice":
@@ -959,7 +982,7 @@ class Game:
         self.world.draw_view(self.canvas, camera, (), self.paper_actor(Vector2(pos)+(38,57), "left"),
                              i==4, tick, survivors=silhouette)
         focus = Vector2(pos) - camera.topleft
-        self.weather_fx("rain", i in (1, 2), focus, False, tick, intro=True)
+        self.weather_fx("rain", i in (1, 2), focus, tick, intro=True)
         if i <= 1 and .43 < fraction < .50:
             self.shade((180, 207, 201, 106))
         if i in (1,2):
@@ -986,7 +1009,7 @@ class Game:
         tick = pygame.time.get_ticks()
         self.world.draw_view(self.canvas, camera, (), self.paper_actor(self.run_state.position), False, tick,
                              enemies=(attacker,), survivors=(victim,))
-        self.weather_fx("rain", True, point - camera.topleft, False, tick, intro=True)
+        self.weather_fx("rain", True, point - camera.topleft, tick, intro=True)
         self.panel((41, 562, 1198, 126), INK)
         place = self.tr("route.place." + self.run_state.incident_site)
         self.words(self.run_state.clock + "  ·  " + place, (66, 580), 22, GOLD, True)
@@ -1026,7 +1049,7 @@ class Game:
                 x, y = Vector2(enemy.position)-offset
                 if SIZE.collidepoint(x,y):
                     self.enemy_mark(enemy, (x,y))
-            self.weather_fx(state.weather, state.night, Vector2(state.position)-offset, state.lamp_on, tick, blackout=True)
+            self.weather_fx(state.weather, state.night, Vector2(state.position)-offset, tick, blackout=True)
             if self.debug_grid:
                 self.draw_coordinate_grid(camera)
         else:
@@ -1052,6 +1075,12 @@ class Game:
                                                stride=actor.stride)
                     if actor.status == "bitten":
                         pygame.draw.circle(self.canvas, RED, (round(actor.position[0]), round(actor.position[1])-58), 4)
+        for projectile in state.projectiles:
+            if projectile.area == state.area and (not outdoor or self.lit_at(projectile.position)):
+                pos = Vector2(projectile.position) - offset - (0, 16)
+                pygame.draw.line(self.canvas, RED if projectile.contaminated else GOLD,
+                                 pos - Vector2(projectile.velocity).normalize()*14, pos, 2)
+                pygame.draw.circle(self.canvas, PAPER, pos, 4)
         if not hud:
             return
         if outdoor:
@@ -1067,6 +1096,10 @@ class Game:
                 cache = next((cache for cache in state.caches if cache.id == key), None)
                 if cache and cache.item == "bat":
                     pygame.draw.line(self.canvas, GOLD, position+(8,-10), position+(-8,10), 5)
+                elif cache and cache.container == "dropped_key":
+                    self.gear_icon("key", (position.x, position.y-4), GOLD)
+            elif kind == "event_point":
+                pygame.draw.circle(self.canvas, BLUE, position, 10, 2)
             elif key in STORY_STEPS:
                 x, y = round(position.x), round(position.y)
                 pygame.draw.polygon(self.canvas, INK, ((x,y-11),(x+11,y),(x,y+11),(x-11,y)))
@@ -1086,6 +1119,9 @@ class Game:
             direction = Vector2(FACING[state.facing]).rotate(angle)
             start = Vector2(state.position)-offset+(0,-15)
             pygame.draw.line(self.canvas, GOLD, start+direction*22, start+direction*57, 5)
+        if state.infection_until:
+            remaining = max(0, state.infection_until - state.elapsed)
+            self.shade((67, 22, 31, min(180, round((1.35 - remaining) * 140))))
         if self.scare_time > 0 and self.profile.scares:
             self.draw_scare()
         self.draw_hud(mouse)
@@ -1133,36 +1169,20 @@ class Game:
 
     def enemy_mark(self, enemy, point):
         x, y = map(round, point)
-        color = KINDS.get(enemy.kind, KINDS["wanderer"])[-1]
-        height = {"crawler": 51, "brute": 96, "caller": 84}.get(enemy.kind, 74)
-        if enemy.infected:
-            bar_width = 48
-            bar_y = y + 12
-            pygame.draw.rect(self.canvas, INK, (x-bar_width//2, bar_y, bar_width, 7), border_radius=3)
-            health = max(0, min(4, enemy.health))
-            pygame.draw.rect(self.canvas, RED, (x-bar_width//2+2, bar_y+2, round((bar_width-4)*health/4), 3), border_radius=2)
-        if enemy.windup:
+        if enemy.concealed:
+            return
+        if enemy.stunned:
+            self.words('✦', (x, y-44), 19, GOLD, True, 'center')
+        elif enemy.reveal or enemy.windup:
             pygame.draw.arc(self.canvas, RED, (x-24, y-15, 48, 27), 0, math.tau, 4)
-            self.words("!", (x, y-height-13), 19, RED, True, "center")
+            self.words('!' if not enemy.throw_target else '»', (x, y-79), 21, RED, True, 'center')
         elif enemy.chasing and distance(enemy.position, self.run_state.position) <= 182:
-            self.words(self.tr("infected." + (enemy.kind if enemy.kind in KINDS else "wanderer")),
-                       (x, y-height), 13, color, True, "midbottom")
-
-    def lamp_shadow(self):
-        if self.lamp_shadows is None:
-            self.lamp_shadows = flashlight_shadows()
-        return self.lamp_shadows[self.run_state.facing]
+            kind = enemy.kind if enemy.kind in KINDS else 'hunter'
+            self.words(self.tr('infected.' + kind), (x, y-76), 13, KINDS[kind][-1], True, 'midbottom')
 
     def lit_at(self, point):
         state = self.run_state
-        if not state.night or distance(point, state.position) <= NIGHT_VISION:
-            return True
-        if not state.lamp_on:
-            return False
-        x, y = (Vector2(point) - state.position) + (LAMP_REACH, LAMP_REACH)
-        shadow = self.lamp_shadow()
-        pixel = (round(x), round(y))
-        return shadow.get_rect().collidepoint(pixel) and shadow.get_at(pixel).a < 167
+        return not state.night or distance(point, state.position) <= NIGHT_VISION
 
     def draw_rain(self, tick, *, heavy=False):
         self.overlay.fill((0, 0, 0, 0))
@@ -1187,14 +1207,11 @@ class Game:
                 pygame.draw.circle(self.night_pool, (*color, amount), (size, size), radius)
         return self.night_pool
 
-    def weather_fx(self, weather, night, focus, lamp, tick, intro=False, *, blackout=False):
+    def weather_fx(self, weather, night, focus, tick, intro=False, *, blackout=False):
         if night and blackout:
             self.overlay.fill((13, 26, 41, 210))
             pool = self.ambient_night()
             self.overlay.blit(pool, pool.get_rect(center=focus), special_flags=pygame.BLEND_RGBA_MIN)
-            if lamp:
-                shadow = self.lamp_shadow()
-                self.overlay.blit(shadow, shadow.get_rect(center=focus), special_flags=pygame.BLEND_RGBA_MIN)
             self.canvas.blit(self.overlay, (0, 0))
         elif night or weather in ("rain", "cloud"):
             self.shade((16, 29, 44, 119 if night else 37 if weather == "rain" else 21))
@@ -1203,7 +1220,7 @@ class Game:
 
     def draw_hud(self, mouse):
         state = self.run_state
-        self.panel((23, 21, 263, 97), INK)
+        self.panel((23, 21, 263, 123), INK)
         if state.area in STORY_ROOMS:
             place = self.tr("location." + state.area)
         elif state.area != "campus":
@@ -1212,7 +1229,8 @@ class Game:
             place = self.tr("weather." + state.weather)
         self.words(state.clock, (267, 34), 16, GOLD, True, "topright")
         self.words(place, (39, 34), 15 if self.fonts.get(17, True).size(place)[0] > 173 else 17, PAPER, True)
-        for y, key, value, color in ((65,"hunger",state.hunger,GOLD),(90,"thirst",state.thirst,BLUE)):
+        for y, key, value, color in ((65,"hunger",state.hunger,GOLD), (90,"thirst",state.thirst,BLUE),
+                                     (115,"stamina",state.stamina,(153,190,124))):
             self.words(self.tr("ui."+key), (39, y-4), 14, MUTED)
             pygame.draw.rect(self.canvas,(59,72,70),(118,y,116,8),border_radius=4)
             pygame.draw.rect(self.canvas, RED if value < 23 else color,(118,y,116*value/100,8),border_radius=4)
@@ -1235,9 +1253,12 @@ class Game:
             top = 63 if self.persistent_hint else 20
             self.panel((368, top, 544, 38), INK)
             self.words(self.toast, (640, top + 19), 17, PAPER, False, "center")
-        self.panel((310, 622, 660, 94), INK)
+        if state.injury_until > state.elapsed:
+            self.words(self.tr("ui.injury", seconds=math.ceil(state.injury_until-state.elapsed)), (39, 156), 14, RED, True)
+        left = (1280 - (len(GEAR)*107+18)) // 2
+        self.panel((left, 622, len(GEAR)*107+18, 94), INK)
         for i, item in enumerate(GEAR):
-            rect = pygame.Rect(318+107*i, 631, 101, 57)
+            rect = pygame.Rect(left+9+107*i, 631, 101, 57)
             self.hotbar.append(rect)
             select = i == state.selected
             self.panel(rect, (63,67,51) if select else (47,58,56) if rect.collidepoint(mouse) else (34,47,46),
@@ -1246,15 +1267,13 @@ class Game:
             self.gear_icon(item, (rect.centerx, rect.y+24), color)
             self.words(str(i+1), (rect.x+7, rect.y+5), 12, MUTED)
             self.words(self.tr("gear."+item), (rect.centerx,rect.bottom-5), 12, PAPER, False, "midbottom")
-            amount = f"{round(state.battery)}%" if item=="lamp" and state.pack[item] else str(state.pack[item])
+            amount = str(state.pack[item])
             self.words(amount, (rect.right-7,rect.y+9), 12, color, True, "midright")
         self.words(self.tr("gear_tip." + GEAR[state.selected]), (640, 704), 15, PAPER, False, "center")
         self.words(self.tr("ui.controls"), (1259, 687), 13, MUTED, False, "bottomright")
         if state.area == "campus" and state.night:
-            self.words(self.tr("weather.night"), (39, 128), 15, PAPER, True)
-            if not state.lamp_on:
-                hint = "ui.night_lamp" if state.pack["lamp"] and state.battery > 0 else "ui.night_map"
-                self.words(self.tr(hint), (39, 153), 14, MUTED)
+            self.words(self.tr("weather.night"), (39, 180), 15, PAPER, True)
+            self.words(self.tr("ui.night_map"), (39, 203), 14, MUTED)
 
     def gear_icon(self, item, center, color):
         x,y = center
@@ -1269,13 +1288,10 @@ class Game:
             for move_x in (-10,10):
                 pygame.draw.circle(self.canvas,color,(x+move_x,y+4),6,2)
             pygame.draw.lines(self.canvas,color,True,[(x-10,y+4),(x-4,y-5),(x+3,y+4),(x+10,y+4),(x+6,y-7)],2)
-        elif item == "lamp":
-            pygame.draw.polygon(self.canvas,color,[(x-11,y-7),(x-5,y-7),(x-2,y-4),(x+11,y-4),(x+11,y+4),(x-2,y+4),(x-5,y+7),(x-11,y+7)])
-        elif item == "cell":
-            pygame.draw.rect(self.canvas,color,(x-6,y-8,12,17),2,border_radius=3)
-            pygame.draw.line(self.canvas,color,(x-2,y-10),(x+2,y-10),2)
-            pygame.draw.line(self.canvas,color,(x,y-4),(x,y+3),2)
-            pygame.draw.line(self.canvas,color,(x-3,y),(x+3,y),2)
+        elif item == 'key':
+            pygame.draw.circle(self.canvas, color, (x-6,y-3), 5, 3)
+            pygame.draw.line(self.canvas, color, (x-2,y), (x+8,y+8), 3)
+            pygame.draw.line(self.canvas, color, (x+4,y+4), (x+9,y), 2)
         else:
             pygame.draw.ellipse(self.canvas,color,(x-12,y-7,24,15))
             pygame.draw.line(self.canvas,INK,(x-7,y+2),(x+7,y+2),2)
@@ -1314,8 +1330,9 @@ class Game:
             self.lines(self.card_quote, (274, min(y + 12, 414)), 17, 720, MUTED)
         for i, action in enumerate(self.options):
             key = action.split("/")[0]
+            label = self.encounters.option_label(action) if action.startswith("event_") else self.tr("choice."+key)
             self.button((274+i%2*365, 470+i//2*56, 347, 45),
-                        f"{i+1}  ·  "+self.tr("choice."+key), "choice/"+action, mouse)
+                        f"{i+1}  ·  "+label, "choice/"+action, mouse)
         self.button_key((782, 597, 222, 38), "close","play", mouse, accent=not self.options)
 
     def draw_journal(self, mouse):
@@ -1441,6 +1458,13 @@ class Game:
             tag.clamp_ip(pygame.Rect(149, 121, 609, 500))
             self.panel(tag, INK, GOLD, radius=6)
             self.words(name, tag.center, 16, PAPER, True, "center")
+        if waypoint := self.encounters.waypoint():
+            area, point = waypoint
+            if area != "campus":
+                point = self.slots.doors[area]
+            if bounds.collidepoint(point):
+                x, y = (Vector2(point) - bounds.topleft) * scale + map_rect.topleft
+                pygame.draw.circle(self.canvas, BLUE, (x, y), 7, 2)
         self.words(self.tr("ui.landmarks"), (779, 107), 20, GOLD, True)
         for key, row in rows.items():
             self.button(row, self.campus_name(key), "map_pin/" + key, mouse, accent=key == highlighted)
