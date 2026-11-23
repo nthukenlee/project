@@ -1048,7 +1048,7 @@ class Game:
             for enemy in enemies:
                 x, y = Vector2(enemy.position)-offset
                 if SIZE.collidepoint(x,y):
-                    self.enemy_mark(enemy, (x,y))
+                    self.enemy_mark(enemy, (x,y), tick)
             self.weather_fx(state.weather, state.night, Vector2(state.position)-offset, tick, blackout=True)
             if self.debug_grid:
                 self.draw_coordinate_grid(camera)
@@ -1066,7 +1066,7 @@ class Game:
                                                self.profile.appearance, tick, .97, running=self.running)
                 elif actor.infected:
                     self.world.characters.draw_zombie(self.canvas, actor.position, actor, tick)
-                    self.enemy_mark(actor, actor.position)
+                    self.enemy_mark(actor, actor.position, tick)
                 else:
                     variant = actor.identity + 17 if actor.identity >= 0 else sum(map(ord,actor.kind))
                     active = state.outbreak and actor.moving and actor.status in ("joined", "bitten")
@@ -1167,12 +1167,33 @@ class Game:
                     occupied.append(label)
                     break
 
-    def enemy_mark(self, enemy, point):
+    def enemy_mark(self, enemy, point, tick=0):
         x, y = map(round, point)
         if enemy.concealed:
             return
         if enemy.stunned:
-            self.words('✦', (x, y-44), 19, GOLD, True, 'center')
+            base_height = {
+                "crawler": 38,
+                "brute": 78,
+                "armored": 68,
+                "hidden": 48,
+            }.get(enemy.kind, 60)
+            tilt_offset = round(base_height * math.sin(math.radians(25)) * 0.45)
+            center = (x - tilt_offset, y - base_height - 18)
+            phase = (tick // 65) % 12
+            for index in range(12):
+                angle = -math.pi / 2 + (index - phase) * math.tau / 12
+                age = (index - phase) % 12
+                fraction = 1 - age / 12
+                color = tuple(round(MUTED[channel] * fraction + INK[channel] * (1 - fraction)) for channel in range(3))
+                inner = 5
+                outer = 10
+                start = (round(center[0] + math.cos(angle) * inner),
+                         round(center[1] + math.sin(angle) * inner))
+                end = (round(center[0] + math.cos(angle) * outer),
+                       round(center[1] + math.sin(angle) * outer))
+                pygame.draw.line(self.canvas, color, start, end, 3)
+                pygame.draw.circle(self.canvas, color, end, 1)
         elif enemy.reveal or enemy.windup:
             pygame.draw.arc(self.canvas, RED, (x-24, y-15, 48, 27), 0, math.tau, 4)
             self.words('!' if not enemy.throw_target else '»', (x, y-79), 21, RED, True, 'center')
