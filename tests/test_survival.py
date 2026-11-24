@@ -1,4 +1,6 @@
 from collections import deque
+from array import array
+import math
 import os
 from pathlib import Path
 import tempfile
@@ -10,7 +12,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
 from nthu_adventure.survival import Actor, CAMPUS_BUILDINGS, ENDING, GEAR, INFECTION_SECONDS, KINDS, MUTATIONS, Projectile, Run, RunStore, body, simulate, use_gear
-from nthu_adventure.survival_game import MAP_PAGE_SIZE, Game
+from nthu_adventure.survival_game import MAP_PAGE_SIZE, SIGHTING_SECONDS, Game
 
 
 def walkable_steps(start, goal, collision, step=5):
@@ -441,6 +443,32 @@ class LastReportTest(unittest.TestCase):
         g.action("zoom")
         g.map_selected = None
 
+    def test_field_map_changes_with_blackout_and_only_tracks_seen_actors(self):
+        game = self.game
+        state = game.run_state
+        day, bounds, rect, scale = game.map_layer()
+        x, y = state.position
+        state.actors = {
+            "seen": Actor("hunter", (x - 32, y), status="hostile"),
+            "hidden": Actor("hidden", (x - 52, y), status="hostile", concealed=True),
+            "dormant": Actor("hunter", (x - 65, y), status="dormant", spawn_delay=99),
+            "far": Actor("hunter", (x - 510, y), status="hostile"),
+            "occluded": Actor("hunter", (x - 100, y), status="hostile"),
+        }
+        game.record_sightings()
+        self.assertFalse(game.map_sightings)
+        state.start_outbreak()
+        field, field_bounds, field_rect, field_scale = game.map_layer()
+        self.assertNotEqual(day.get_at((0, 0)), field.get_at((0, 0)))
+        self.assertEqual((field_bounds, field_rect, field_scale), (bounds, rect, scale))
+        with patch.object(game.world, "collides", side_effect=lambda box: box.centerx < x - 80):
+            game.record_sightings()
+            self.assertEqual(set(game.map_sightings), {"seen"})
+            state.actors["seen"].concealed = True
+            state.elapsed += SIGHTING_SECONDS + 1
+            game.record_sightings()
+            self.assertFalse(game.map_sightings)
+
     def test_night_keeps_nearby_vision_without_removed_gear(self):
         game = self.game
         run = game.run_state
@@ -495,6 +523,17 @@ class LastReportTest(unittest.TestCase):
         game.update_audio(.05)
         self.assertGreater(game.audio.levels["arrival"], 0)
         self.assertFalse(hasattr(game.audio, "speak"))
+
+    def test_score_is_audible_without_clipping_or_boosting_rain(self):
+        game = self.game
+        for name in ("dusk", "night", "pursuit", "arrival"):
+            with self.subTest(track=name):
+                samples = array("h", game.audio.tracks[name].get_raw())
+                rms = math.sqrt(sum(value * value for value in samples) / len(samples)) / 32768
+                self.assertGreater(rms, .09)
+                self.assertLess(max(map(abs, samples)), 26000)
+        rain = array("h", game.audio.tracks["rain"].get_raw())
+        self.assertLess(max(map(abs, rain)), 1000)
 
     def test_character_options_and_late_distinct_mutations(self):
         game = self.game

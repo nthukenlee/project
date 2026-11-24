@@ -12,6 +12,7 @@ from pygame import Vector2
 
 from .audio import AudioManager
 from .constants import FPS, TILE, WINDOW_SIZE, WORLD_HEIGHT, WORLD_WIDTH
+from .content import WATERS
 from .encounter_flow import EncounterFlow
 from .expedition import MAIN_STEPS, MINUTE_SECONDS, SIGNAL_MINUTE, STOP_MINUTE, STORY_STEPS
 from .interiors import create_rooms
@@ -23,19 +24,19 @@ from .survival import (
     simulate, use_gear, visible,
 )
 from .ui import FontBook
+from .survival_ui import (
+    BLUE, DIRECTORY, FIELD_MAP, GOLD, INK, LINE, MUTED, PANEL, PAPER, RED, TRACK,
+    InterfaceArt, campus_atlas, cut_panel, icon,
+)
 
 SIZE = pygame.Rect((0, 0), WINDOW_SIZE)
 NAME_BOX = pygame.Rect(570, 236, 422, 57)
 NAME_LIMIT = 12
 MAP_PAGE_SIZE = 8
+MAP_SHEET = pygame.Rect(36, 91, 838, 564)
+MAP_FOCUS = pygame.Rect(26*TILE, 19*TILE, 130*TILE, 126*TILE)
+SIGHTING_SECONDS = 50
 NIGHT_VISION = 146
-INK = (23, 33, 34)
-PANEL = (30, 43, 43)
-PAPER = (240, 235, 218)
-MUTED = (174, 185, 169)
-GOLD = (233, 184, 106)
-RED = (230, 117, 94)
-BLUE = (114, 181, 197)
 INTRO_BEATS = (0, 8, 16, 25, 33, 40)
 QUICK_KEYS = (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6)
 PALETTE = ((219,157,111), (106,172,198), (190,139,86), (232,192,105), (150,169,151), (156,173,146))
@@ -63,6 +64,7 @@ class Game:
         self.scare_ready = 0.
         self.clock = pygame.time.Clock()
         self.fonts = FontBook()
+        self.interface = InterfaceArt()
         self.audio = AudioManager()
         self.world = PaperWorld()
         self.rooms = create_rooms()
@@ -83,6 +85,9 @@ class Game:
         }
         self.maps = {}
         self.map_page = 0
+        self.map_return = "play"
+        self.map_sightings = {}
+        self.sighting_check = 0.
         self.event_page = 0
         self.map_selected = None
         self.scene = "title"
@@ -100,11 +105,12 @@ class Game:
         self.card = ()
         self.card_values = {}
         self.card_speaker = self.card_quote = ""
+        self.card_event = False
         self.incident_time = 0
         self.outbreak_cue_until = 0
         self.pursuit_until = 0
         self.options = ()
-        self.map_zoom = False
+        self.map_zoom = True
         self.debug_grid = False
 
     def tr(self, key, **values):
@@ -196,6 +202,7 @@ class Game:
         self.toast = ""
         self.persistent_hint = ""
         self.pursuit_until = 0
+        self.reset_surveys()
         self.store.save(self.run_state)
         self.focus_name(False)
 
@@ -211,7 +218,15 @@ class Game:
         self.scene = "intro" if self.run_state.intro else "play"
         self.intro_time = 0
         self.autosave_at = self.run_state.elapsed
+        self.reset_surveys()
         self.encounters.sync()
+
+    def reset_surveys(self):
+        self.map_page = 0
+        self.map_selected = None
+        self.map_return = "play"
+        self.map_sightings.clear()
+        self.sighting_check = 0.
 
     def finish_intro(self):
         self.run_state.intro = False
@@ -294,19 +309,26 @@ class Game:
                     self.toast = ""
                     self.persistent_hint = ""
                     self.toast_until = 0
-                self.scene = {pygame.K_q: "journal", pygame.K_m: "map", pygame.K_ESCAPE: "pause"}[key]
+                if key == pygame.K_m:
+                    self.open_map()
+                else:
+                    self.scene = "journal" if key == pygame.K_q else "pause"
         elif scene == "card":
             if key in QUICK_KEYS and QUICK_KEYS.index(key) < len(self.options):
                 self.resolve(self.options[QUICK_KEYS.index(key)])
+            elif key == pygame.K_m and self.card_event and not self.options:
+                self.open_map("card")
             elif key == pygame.K_ESCAPE or (not self.options and key in (pygame.K_e, pygame.K_RETURN, pygame.K_SPACE)):
                 self.scene = "play"
         elif scene == "event_log" and key in (pygame.K_ESCAPE, pygame.K_q):
             self.scene = "journal"
-        elif key == pygame.K_ESCAPE and scene in ("settings", "map", "journal", "pause", "confirm"):
+        elif scene == "map" and key in (pygame.K_ESCAPE, pygame.K_m):
+            self.scene = self.map_return
+        elif key == pygame.K_ESCAPE and scene in ("settings", "journal", "pause", "confirm"):
             self.scene = self.previous if scene == "settings" else "title" if scene == "confirm" else "play"
         elif scene == "map" and key in (pygame.K_PAGEUP, pygame.K_PAGEDOWN):
             self.change_map_page(1 if key == pygame.K_PAGEDOWN else -1)
-        elif (scene == "map" and key == pygame.K_m) or (scene == "journal" and key == pygame.K_q):
+        elif scene == "journal" and key == pygame.K_q:
             self.scene = "play"
         elif scene == "death" and key == pygame.K_RETURN:
             self.begin()
@@ -390,6 +412,12 @@ class Game:
         elif action == "zoom":
             self.map_zoom = not self.map_zoom
             self.map_page = 0
+        elif action == "map":
+            self.open_map()
+        elif action == "event_map":
+            self.open_map("card")
+        elif action == "map_back":
+            self.scene = self.map_return
         elif action in ("map_previous", "map_next"):
             self.change_map_page(1 if action == "map_next" else -1)
         elif action in ("event_previous", "event_next"):
@@ -399,7 +427,7 @@ class Game:
             self.scene = action
         elif action.startswith("map_pin/"):
             self.map_selected = action.split("/", 1)[1]
-        elif action in ("play", "map", "journal"):
+        elif action in ("play", "journal"):
             self.scene = action
 
     def collides(self, rect):
@@ -451,9 +479,24 @@ class Game:
             self.scene = "death"
         else:
             self.advance_crisis()
+            self.record_sightings()
             if state.elapsed - self.autosave_at >= 18:
                 self.store.save(state)
                 self.autosave_at = state.elapsed
+
+    def record_sightings(self):
+        state = self.run_state
+        if not state.outbreak or state.area != "campus" or state.elapsed < self.sighting_check:
+            return
+        self.sighting_check = state.elapsed + .45
+        self.map_sightings = {key: (point, time) for key, (point, time) in self.map_sightings.items()
+                              if state.elapsed - time <= SIGHTING_SECONDS}
+        sight_range = NIGHT_VISION if state.night else 360
+        for key, actor in nearby_targets(state, "campus"):
+            if (actor.infected and not actor.concealed and
+                    distance(actor.position, state.position) <= sight_range and
+                    visible(state.position, actor.position, self.world.collides)):
+                self.map_sightings[key] = tuple(actor.position), state.elapsed
 
     def update_audio(self, dt):
         state = self.run_state
@@ -622,11 +665,12 @@ class Game:
                 return self.tr("event.door_blocked")
         return self.tr(f"{kind}.{key}")
 
-    def show(self, title, text, options=(), *, speaker="", quote=None, **values):
+    def show(self, title, text, options=(), *, speaker="", quote=None, encounter=False, **values):
         self.card = title, text
         self.card_values = values
         self.card_speaker = speaker
         self.card_quote = self.tr(quote) if quote else ""
+        self.card_event = encounter
         self.options = options
         self.scene = "card"
 
@@ -838,6 +882,11 @@ class Game:
     def words(self, text, point, size=18, color=PAPER, bold=False, anchor="topleft"):
         return self.fonts.draw(self.canvas, text, point, size, color, bold, anchor)
 
+    def fit_words(self, text, point, size, width, color=PAPER, bold=False, anchor="topleft"):
+        while size > 11 and self.fonts.get(size, bold).size(text)[0] > width:
+            size -= 1
+        return self.words(text, point, size, color, bold, anchor)
+
     def lines(self, text, point, size, width, color=PAPER):
         x, y = point
         for line in self.fonts.wrapped(text, size, width):
@@ -845,24 +894,42 @@ class Game:
             y += size + 8
         return y
 
-    def panel(self, rect, color=PANEL, border=(78, 100, 94), radius=10):
-        pygame.draw.rect(self.canvas, color, rect, border_radius=radius)
-        pygame.draw.rect(self.canvas, border, rect, 1, border_radius=radius)
+    def panel(self, rect, color=PANEL, border=LINE, radius=10):
+        cut_panel(self.canvas, rect, color, border, radius//2)
+
+    def frame(self, rect, title, *, accent=GOLD, title_size=30):
+        rect = pygame.Rect(rect)
+        self.panel(rect.move(0, 6), (7, 12, 19), (7, 12, 19))
+        self.panel(rect, INK)
+        pygame.draw.rect(self.canvas, accent, (rect.x+19, rect.y, 48, 3))
+        pygame.draw.line(self.canvas, LINE, (rect.x+22, rect.y+63), (rect.right-22,rect.y+63))
+        self.fit_words(title, (rect.x+24,rect.y+32), title_size, rect.width-48, PAPER, True, "midleft")
+        return rect
 
     def shade(self, color=(12, 19, 22, 192)):
         self.overlay.fill(color)
         self.canvas.blit(self.overlay, (0, 0))
 
-    def button(self, rect, label, action, mouse, *, accent=False, enabled=True):
+    def button(self, rect, label, action, mouse, *, accent=False, enabled=True, glyph=None, keycap=None):
         rect = pygame.Rect(rect)
         hover = enabled and rect.collidepoint(mouse)
-        fill = (208, 161, 95) if accent and hover else GOLD if accent else (53, 71, 68) if hover else PANEL
-        self.panel(rect, fill, (158, 146, 114) if hover else (83, 105, 94))
-        color = INK if accent else PAPER if enabled else (112, 130, 126)
-        size = 19
-        while size > 13 and self.fonts.get(size, accent).size(label)[0] > rect.width-18:
-            size -= 1
-        self.words(label, rect.center, size, color, accent, "center")
+        fill = ((255, 204, 145) if hover else GOLD) if accent else (
+            (38, 55, 48) if hover else (25, 39, 36) if enabled else (18, 28, 27))
+        border = GOLD if accent else (108,139,126) if hover else LINE
+        self.panel(rect, fill, border)
+        color = INK if accent else PAPER if enabled else (115, 132, 123)
+        if glyph:
+            icon(self.canvas, glyph, (rect.x+26, rect.centery), color)
+            self.fit_words(label, (rect.x+50, rect.centery), 20, rect.width-68, color, accent, "midleft")
+            if hover and not accent:
+                pygame.draw.rect(self.canvas, BLUE, (rect.x, rect.y+11, 2, rect.height-22))
+        elif keycap:
+            key_width = 23 if len(keycap)==1 else len(keycap)*8+13
+            self.interface.keycap(self.canvas, keycap, (rect.x+8, rect.centery-11,key_width,22))
+            self.fit_words(label, (rect.x+17+key_width, rect.centery), 16,
+                           rect.width-key_width-24, color, accent, "midleft")
+        else:
+            self.fit_words(label, rect.center, 18, rect.width-18, color, accent, "center")
         self.buttons.append((rect, action, enabled))
 
     def button_key(self, rect, key, action, mouse, **flags):
@@ -899,38 +966,43 @@ class Game:
             self.draw_settings(mouse)
 
     def draw_menu(self, mouse):
-        point = self.slots.lake
         tick = pygame.time.get_ticks()
-        camera = self.world.camera_for(point[0]+180, point[1]-38)
-        self.world.draw_view(self.canvas, camera, (), self.paper_actor(point, "right"), False, tick)
-        self.shade((19, 32, 46, 105))
-        self.overlay.fill((0,0,0,0))
-        for x in range(780):
-            pygame.draw.line(self.overlay, (15, 25, 25, round(235*(1-x/780))), (x,0), (x,720))
-        self.canvas.blit(self.overlay, (0, 0))
+        self.draw_menu_backdrop(tick)
         self.draw_rain(tick, heavy=True)
         if self.scene == "title":
-            self.words(self.tr("ui.brand"), (80, 110), 24, GOLD, True)
-            self.words(self.tr("ui.title"), (77, 148), 57, PAPER, True)
-            pygame.draw.line(self.canvas, (145, 131, 93), (82, 242), (408, 242), 2)
-            for i, (label, action) in enumerate((("new", "customize"), ("continue", "continue"), ("settings", "settings"), ("quit", "quit"))):
-                self.button_key((82, 280 + 62*i, 280, 50), label, action, mouse,
-                                accent=i == 0, enabled=action != "continue" or self.resume_run is not None)
-            self.words(self.tr("ui.unofficial"), (82, 650), 16, MUTED)
+            self.panel((0,0,1280,57), (16,25,24), LINE, radius=0)
+            pygame.draw.rect(self.canvas,GOLD,(41,12,32,32),1,border_radius=2)
+            icon(self.canvas,"campus",(57,28),GOLD,23)
+            self.fit_words(self.tr("ui.brand"),(85,28),18,350,PAPER,True,"midleft")
+            self.words(self.tr("ui.setting_campus"), (48, 187), 16, GOLD, True)
+            self.interface.heading(self.canvas,self.tr("ui.brand"),(43,213),111,665,self.localizer.language)
+            self.fit_words(self.tr("ui.title"), (48, 343), 35, 580, GOLD, True)
+            self.lines(self.tr("ui.title_hook"), (49, 403), 18, 406, PAPER)
+            for i, (label, action, glyph) in enumerate((("new", "customize", "start"),
+                    ("continue", "continue", "resume"), ("settings","settings","settings"), ("quit","quit","quit"))):
+                self.button_key((48+236*(i%2), 494+58*(i//2), 227, 47), label, action, mouse, glyph=glyph,
+                                accent=i==0, enabled=action!="continue" or self.resume_run is not None)
+            pygame.draw.line(self.canvas,(90,107,96),(42,653),(1238,653))
+            icon(self.canvas,"rain",(53,678),GOLD,17)
+            self.fit_words(self.tr("ui.title_weather"), (69, 678), 15, 370, PAPER, anchor="midleft")
+            self.fit_words(self.tr("ui.unofficial"), (1238, 678), 15, 590, MUTED, anchor="midright")
         elif self.scene == "confirm":
             self.shade()
-            self.panel((332, 208, 616, 298))
-            self.words(self.tr("ui.new"), (371, 244), 32, GOLD, True)
+            self.frame((332, 208, 616, 298), self.tr("ui.new"))
             self.lines(self.tr("ui.replace"), (374, 314), 21, 530)
             self.button_key((374, 425, 240, 48), "back", "cancel_profile", mouse)
             self.button_key((661, 425, 239, 48), "new", "confirm", mouse, accent=True)
         else:
             self.shade()
-            self.panel((220, 88, 840, 545))
-            self.words(self.tr("ui.profile"), (265, 126), 33, GOLD, True)
+            self.frame((220, 88, 840, 545), self.tr("ui.profile"))
+            self.panel((257, 171, 257, 403), PANEL)
+            for y in range(196, 555, 27):
+                pygame.draw.line(self.canvas, (37,53,64), (270,y), (500,y))
+            pygame.draw.line(self.canvas, (46,65,77), (385,188), (385,557))
             portrait = self.world.characters.sprite("down", 0, self.profile.appearance, preview=True)
-            pygame.draw.ellipse(self.canvas, (23, 34, 34), (366, 482, 76, 12))
-            self.canvas.blit(portrait, portrait.get_rect(midbottom=(404, 487)))
+            portrait = pygame.transform.smoothscale_by(portrait,1.48)
+            pygame.draw.ellipse(self.canvas, (13, 23, 31), (322, 521, 125, 19))
+            self.canvas.blit(portrait, portrait.get_rect(midbottom=(385, 528)))
             self.words(self.tr("ui.name"), (572, 201), 19, MUTED)
             self.draw_name_input(tick)
             for i, gender in enumerate(("male", "female")):
@@ -944,6 +1016,15 @@ class Game:
                 self.button((x, y, 200, 41), label, "style/"+part, mouse)
             self.button_key((570, 497, 422, 56), "depart", "start", mouse, accent=True)
             self.button_key((570, 564, 422, 42), "back", "cancel_profile", mouse)
+
+    def draw_menu_backdrop(self, tick):
+        if self.interface.backdrop is not None:
+            self.canvas.blit(self.interface.backdrop, (0, 0))
+        else:
+            point = self.slots.lake
+            camera = self.world.camera_for(point[0]+180, point[1]-38)
+            self.world.draw_view(self.canvas,camera,(),self.paper_actor(point,"right"),False,tick)
+        self.canvas.blit(self.interface.title_shade, (0, 0))
 
     def draw_name_input(self, tick):
         self.panel(NAME_BOX, INK, GOLD if self.name_focused else (78, 100, 94))
@@ -1108,10 +1189,12 @@ class Game:
                 color = GOLD if current and current[1] == key else (218, 219, 190)
                 pygame.draw.circle(self.canvas, color, position, 6, 2)
         if current:
-            label = "E  ·  "+self.label(*current[:2])
-            w = self.fonts.get(19, True).size(label)[0]+32
-            self.panel((640-w//2, 575, w, 36), INK)
-            self.words(label, (640, 593), 19, GOLD, True, "center")
+            label = self.label(*current[:2])
+            width = min(650, self.fonts.get(18, True).size(label)[0]+68)
+            left = 640-width//2
+            self.panel((left, 568, width, 42), INK, LINE)
+            self.interface.keycap(self.canvas, "E", (left+9,576,26,26), selected=True)
+            self.fit_words(label, (left+49,589), 18, width-60, PAPER, True, "midleft")
         if pygame.time.get_ticks() < self.bat_at and (not outdoor or self.lit_at(state.position)):
             factor = 1-((self.bat_at-pygame.time.get_ticks())/450)
             frame = min(4, int(factor*5))
@@ -1188,11 +1271,11 @@ class Game:
         self.overlay.fill((0, 0, 0, 0))
         for i in range(180 if heavy else 86):
             layer = i % 3
-            x = (i * 377 - int(tick * (.10 + layer * .07))) % 1324
-            y = (i * 137 + int(tick * (.38 + layer * .20))) % 756 - 22
+            x = (i * 377 - int(tick * (.06 + layer * .03))) % (SIZE.width+44)
+            y = (i * 137 + int(tick * (.38 + layer * .20))) % (SIZE.height+36) - 22
             length = 8 + layer * 9
-            pygame.draw.aaline(self.overlay, (171, 205, 216, 92 + layer * 47),
-                               (x, y), (x - length * .35, y + length))
+            pygame.draw.aaline(self.overlay, (188, 216, 213, 57 + layer * 42),
+                               (x, y), (x - length * .15, y + length))
         self.canvas.blit(self.overlay, (0, 0))
 
     def ambient_night(self):
@@ -1220,60 +1303,85 @@ class Game:
 
     def draw_hud(self, mouse):
         state = self.run_state
-        self.panel((23, 21, 263, 123), INK)
+        self.panel((20, 19, 290, 170), INK)
         if state.area in STORY_ROOMS:
             place = self.tr("location." + state.area)
         elif state.area != "campus":
             place = self.campus_name(state.area)
         else:
             place = self.tr("weather." + state.weather)
-        self.words(state.clock, (267, 34), 16, GOLD, True, "topright")
-        self.words(place, (39, 34), 15 if self.fonts.get(17, True).size(place)[0] > 173 else 17, PAPER, True)
-        for y, key, value, color in ((65,"hunger",state.hunger,GOLD), (90,"thirst",state.thirst,BLUE),
-                                     (115,"stamina",state.stamina,(153,190,124))):
-            self.words(self.tr("ui."+key), (39, y-4), 14, MUTED)
-            pygame.draw.rect(self.canvas,(59,72,70),(118,y,116,8),border_radius=4)
-            pygame.draw.rect(self.canvas, RED if value < 23 else color,(118,y,116*value/100,8),border_radius=4)
-            self.words(f"{math.ceil(value):d}", (268, y+4), 12, PAPER, False, "midright")
-        self.button_key((1033, 23, 109, 37), "map", "map", mouse)
-        self.button_key((1149, 23, 108, 37), "journal", "journal", mouse)
+        phase = "outbreak" if state.outbreak else "blackout" if state.blackout else "clock"
+        phase_color = RED if state.outbreak else GOLD if state.blackout else BLUE
+        pygame.draw.rect(self.canvas, phase_color, (32,19,40,2))
+        pygame.draw.circle(self.canvas, phase_color, (37,44), 3)
+        self.fit_words(self.tr("ui.status_"+phase), (48,44), 14, 136, phase_color, True, "midleft")
+        self.interface.mono(self.canvas, state.clock, (288,46), 31, PAPER, "midright")
+        self.fit_words(place, (35,70), 17, 250, PAPER, True, "midleft")
+        pygame.draw.line(self.canvas,LINE,(33,89),(297,89))
+        for y, key, value, color in ((104,"hunger",state.hunger,GOLD), (131,"thirst",state.thirst,BLUE),
+                                     (158,"stamina",state.stamina,(171,207,154))):
+            self.fit_words(self.tr("ui."+key), (35,y+5), 14, 84, MUTED, anchor="midleft")
+            pygame.draw.rect(self.canvas,TRACK,(122,y,131,9))
+            pixels = round(131*max(0,min(100,value))/100)
+            fill = RED if value < 23 else color
+            if pixels:
+                pygame.draw.rect(self.canvas,fill,(122,y,pixels,9))
+            for mark in (148,174,201,227):
+                pygame.draw.line(self.canvas, INK, (mark,y), (mark,y+8))
+            self.interface.mono(self.canvas,math.ceil(value),(288,y+5),14,PAPER,"midright")
+        self.button_key((993, 19, 122, 40), "map_short", "map", mouse, keycap="M")
+        self.button_key((1125, 19, 135, 40), "journal_short", "journal", mouse, keycap="Q")
         if state.team:
-            self.panel((1008, 72, 249, 27+25*len(state.team)), INK)
-            self.words(self.tr("ui.team"), (1024, 79), 13, MUTED)
+            self.panel((993, 70, 267, 39+27*len(state.team)), INK)
+            self.words(self.tr("ui.team"), (1009, 80), 13, MUTED, True)
             for i, key in enumerate(state.team):
                 actor = state.actors[key]
                 label = self.actor_name(key)
                 if actor.status == "bitten":
                     label += f"  ·  {self.tr('ui.infected')} {math.ceil(actor.infection)}"
-                self.words(label, (1025, 101+25*i), 15, RED if actor.status=="bitten" else PAPER)
+                color = RED if actor.status=="bitten" else PAPER
+                pygame.draw.circle(self.canvas, color, (1013,114+27*i), 3)
+                self.fit_words(label, (1025, 114+27*i), 15, 223, color, anchor="midleft")
+        top = 19
         if self.persistent_hint:
-            self.panel((368, 20, 544, 38), INK)
-            self.words(self.persistent_hint, (640, 39), 17, PAPER, False, "center")
+            top = self.hud_notice(self.persistent_hint, top, GOLD)
         if self.toast and pygame.time.get_ticks() < self.toast_until:
-            top = 63 if self.persistent_hint else 20
-            self.panel((368, top, 544, 38), INK)
-            self.words(self.toast, (640, top + 19), 17, PAPER, False, "center")
+            self.hud_notice(self.toast, top, BLUE)
         if state.injury_until > state.elapsed:
-            self.words(self.tr("ui.injury", seconds=math.ceil(state.injury_until-state.elapsed)), (39, 156), 14, RED, True)
-        left = (1280 - (len(GEAR)*107+18)) // 2
-        self.panel((left, 622, len(GEAR)*107+18, 94), INK)
+            self.panel((20,199,290,31),INK,(135,72,63))
+            self.fit_words(self.tr("ui.injury",seconds=math.ceil(state.injury_until-state.elapsed)),
+                           (34,214),14,258,RED,True,"midleft")
+        left = (1280 - (len(GEAR)*112+17)) // 2
+        self.panel((left, 616, len(GEAR)*112+17, 98), INK)
         for i, item in enumerate(GEAR):
-            rect = pygame.Rect(left+9+107*i, 631, 101, 57)
+            rect = pygame.Rect(left+9+112*i, 624, 104, 60)
             self.hotbar.append(rect)
             select = i == state.selected
-            self.panel(rect, (63,67,51) if select else (47,58,56) if rect.collidepoint(mouse) else (34,47,46),
-                       GOLD if select else (91,108,98))
-            color = PALETTE[i] if state.pack[item] else (115,128,122)
+            self.panel(rect, (57,44,33) if select else (37,53,46) if rect.collidepoint(mouse) else PANEL,
+                       GOLD if select else LINE)
+            if select:
+                pygame.draw.rect(self.canvas,GOLD,(rect.x+8,rect.y,rect.width-16,2))
+            self.interface.keycap(self.canvas,str(i+1),(rect.x+5,rect.y+5,19,18),selected=select)
+            color = PALETTE[i] if state.pack[item] else (111,135,147)
             self.gear_icon(item, (rect.centerx, rect.y+24), color)
-            self.words(str(i+1), (rect.x+7, rect.y+5), 12, MUTED)
-            self.words(self.tr("gear."+item), (rect.centerx,rect.bottom-5), 12, PAPER, False, "midbottom")
+            self.fit_words(self.tr("gear."+item), (rect.centerx,rect.bottom-5), 14, 92,
+                           PAPER if state.pack[item] or select else MUTED, anchor="midbottom")
             amount = str(state.pack[item])
-            self.words(amount, (rect.right-7,rect.y+9), 12, color, True, "midright")
-        self.words(self.tr("gear_tip." + GEAR[state.selected]), (640, 704), 15, PAPER, False, "center")
-        self.words(self.tr("ui.controls"), (1259, 687), 13, MUTED, False, "bottomright")
+            self.interface.mono(self.canvas,amount,(rect.right-8,rect.y+13),14,color,"midright")
+        self.fit_words(self.tr("gear_tip." + GEAR[state.selected]), (640,699), 14, 510, PAPER, anchor="center")
         if state.area == "campus" and state.night:
-            self.words(self.tr("weather.night"), (39, 180), 15, PAPER, True)
-            self.words(self.tr("ui.night_map"), (39, 203), 14, MUTED)
+            y = 243 if state.injury_until > state.elapsed else 199
+            self.panel((20,y,290,30),INK)
+            self.fit_words(self.tr("ui.night_map"), (34,y+15), 14,262, MUTED, anchor="midleft")
+
+    def hud_notice(self, text, y, color):
+        lines = self.fonts.wrapped(text, 16, 526)
+        height = max(40, 20*len(lines)+15)
+        self.panel((354, y, 572, height), INK)
+        pygame.draw.rect(self.canvas,color,(355,y+8,2,height-16))
+        for i,line in enumerate(lines):
+            self.words(line,(372,y+10+20*i),16,PAPER)
+        return y+height+7
 
     def gear_icon(self, item, center, color):
         x,y = center
@@ -1298,98 +1406,187 @@ class Game:
 
     def draw_pause(self, mouse):
         self.shade()
-        self.panel((464, 146, 352, 427))
-        self.words(self.tr("ui.pause"), (640, 191), 32, GOLD, True,"center")
-        for i,(label,action) in enumerate((("back","play"),("settings","settings"),("save_title","title"),("quit","quit"))):
-            self.button_key((500,244+i*67,280,52),label,action,mouse,accent=i==0)
+        self.frame((424, 132, 432, 465), self.tr("ui.pause"))
+        for i,(label,action,glyph) in enumerate((("resume_game","play","start"),("settings","settings","settings"),
+                                                   ("save_title","title","resume"),("quit","quit","quit"))):
+            self.button_key((466,225+i*73,348,55),label,action,mouse,accent=i==0,glyph=glyph)
+        self.fit_words(self.tr("ui.controls"),(640,548),14,340,MUTED,anchor="center")
 
     def draw_settings(self, mouse):
-        self.canvas.fill(INK)
-        self.panel((402, 146, 476, 427))
-        self.words(self.tr("ui.settings"),(640,194),34,GOLD,True,"center")
-        self.button((455,244,370,53),"中文 / English","language",mouse)
-        self.button_key((455,313,370,53),"window" if self.fullscreen else "fullscreen","screen",mouse)
-        self.button_key((455,382,370,53),"sound_off" if self.profile.sound else "sound_on","sound",mouse)
-        self.button_key((455,445,370,51), "scares_off" if self.profile.scares else "scares_on", "scares", mouse)
-        self.button_key((455,521,370,53),"back","settings_back",mouse,accent=True)
+        self.draw_menu_backdrop(pygame.time.get_ticks())
+        self.shade((9,16,23,133))
+        self.frame((310, 111, 660, 488), self.tr("ui.settings"))
+        rows = (
+            ("setting_language", "繁體中文" if self.localizer.language=="zh_TW" else "English", "language"),
+            ("setting_display", self.tr("ui.setting_full" if self.fullscreen else "ui.setting_window"), "screen"),
+            ("setting_audio", self.tr("ui.state_on" if self.profile.sound else "ui.state_off"), "sound"),
+            ("setting_scares", self.tr("ui.state_on" if self.profile.scares else "ui.state_off"), "scares"),
+        )
+        for i,(label,value,action) in enumerate(rows):
+            y = 194+i*77
+            self.panel((338,y,604,64),PANEL)
+            self.fit_words(self.tr("ui."+label),(358,y+31),18,221,PAPER,True,"midleft")
+            self.button((626,y+9,295,46),value,action,mouse,keycap="F11" if action=="screen" else None)
+        self.button_key((626, 522, 295, 47), "back", "settings_back", mouse, accent=True)
 
     def draw_card(self, mouse):
-        self.shade((14, 23, 25, 127))
-        self.panel((232, 229, 816, 425), INK)
+        if self.card_event:
+            self.draw_encounter(mouse)
+            return
+        self.shade((10, 17, 23, 148))
         title, text = self.card
-        headline = self.tr(title)
-        title_size = 29 if self.fonts.get(29, True).size(headline)[0] <= 720 else 23
-        self.words(headline, (273,260), title_size, GOLD, True)
+        self.frame((230, 175, 820, 488), self.tr(title), accent=BLUE)
         content = self.tr(text, **self.card_values)
-        text_size = 20 if len(self.fonts.wrapped(content, 20, 720)) <= 4 else 17
-        y = self.lines(content, (274,317), text_size, 720)
-        if self.card_speaker:
-            quote = (self.card_speaker + "  ·  " + self.card_quote) if self.card_quote else self.card_speaker
-            self.lines(quote, (274, min(y + 12, 414)), 17, 720, MUTED)
-        elif self.card_quote:
-            self.lines(self.card_quote, (274, min(y + 12, 414)), 17, 720, MUTED)
+        text_size = 21 if len(self.fonts.wrapped(content, 21, 732)) <= 4 else 18
+        y = self.lines(content, (273,263), text_size, 738)
+        speaker = "  ·  ".join(part for part in (self.card_speaker,self.card_quote) if part)
+        if speaker:
+            y = min(y+9,386)
+            pygame.draw.rect(self.canvas, BLUE, (274,y+3,2,18))
+            self.fit_words(speaker,(285,y+12),16,718,MUTED,False,"midleft")
+        count = len(self.options)
+        columns = 1 if count <= 3 else 2
+        choice_width = 732 if columns==1 else 359
         for i, action in enumerate(self.options):
             key = action.split("/")[0]
             label = self.encounters.option_label(action) if action.startswith("event_") else self.tr("choice."+key)
-            self.button((274+i%2*365, 470+i//2*56, 347, 45),
-                        f"{i+1}  ·  "+label, "choice/"+action, mouse)
-        self.button_key((782, 597, 222, 38), "close","play", mouse, accent=not self.options)
+            self.button((274+i%columns*373, 426+i//columns*55, choice_width, 46),
+                        label, "choice/"+action, mouse, keycap=str(i+1))
+        self.button_key((784, 607, 222, 38), "close","play", mouse, accent=not self.options)
+
+    def draw_field_header(self, screen):
+        state = self.run_state
+        self.panel((0,0,1280,68), (16,25,24), LINE, radius=0)
+        self.interface.mono(self.canvas,state.clock,(39,33),31,PAPER,"midleft")
+        self.fit_words(self.tr("ui."+screen),(145,33),21,325,PAPER,True,"midleft")
+        phase = "outbreak" if state.outbreak else "blackout" if state.blackout else "power"
+        phase_color = RED if state.outbreak else GOLD if state.blackout else (165,206,183)
+        self.fit_words(self.tr("ui.status_"+phase),(845,33),15,245,phase_color,anchor="midright")
+        for x, key, value, color in ((885,"hunger",state.hunger,GOLD),
+                                     (1064,"thirst",state.thirst,BLUE)):
+            self.fit_words(self.tr("ui."+key),(x,33),14,80,MUTED,anchor="midleft")
+            pygame.draw.rect(self.canvas,TRACK,(x+82,30,83,6),border_radius=2)
+            fill = round(83 * max(0,min(100,value)) / 100)
+            if fill:
+                pygame.draw.rect(self.canvas,RED if value < 23 else color,
+                                 (x+82,30,fill,6),border_radius=2)
+
+    def draw_encounter(self, mouse):
+        state = self.run_state
+        art_rect = pygame.Rect(55, 116, 432, 500)
+        if state.area == "campus" and self.interface.encounter_art is not None:
+            art = self.interface.encounter_art
+        else:
+            crop = pygame.Rect(0,0,484,560)
+            crop.center = state.position if state.area != "campus" else SIZE.center
+            crop.clamp_ip(SIZE)
+            art = pygame.transform.smoothscale(self.canvas.subsurface(crop),art_rect.size)
+        self.shade((9,17,16,207))
+        self.draw_field_header("encounter_screen")
+        self.panel((36, 96, 1208, 558), PANEL, LINE, radius=6)
+        self.canvas.blit(art,art_rect)
+        self.canvas.blit(self.interface.encounter_shade,art_rect)
+        place = self.tr("ui.setting_campus") if state.area == "campus" else self.campus_name(state.area)
+        pygame.draw.rect(self.canvas,RED,(73,542,2,50))
+        self.fit_words(place,(88,546),15,369,GOLD,True)
+        if self.card_speaker:
+            self.interface.heading(self.canvas,self.card_speaker,(88,569),27,369,self.localizer.language)
+        title, text = self.card
+        self.words(self.tr("ui.event_choices" if self.options else "ui.event_outcome"),(517,130),15,GOLD,True)
+        self.interface.heading(self.canvas,self.tr(title),(517,159),41,686,self.localizer.language)
+        content = self.tr(text, **self.card_values)
+        size = 20
+        while size > 14 and len(self.fonts.wrapped(content,size,676)) * (size+8) > 193:
+            size -= 1
+        body_bottom = self.lines(content,(519,223),size,676,PAPER)
+        choice_top = min(426,max(315,body_bottom+21))
+        columns = 2 if len(self.options) > 3 else 1
+        for i, action in enumerate(self.options):
+            width = 676 if columns == 1 else 332
+            x = 518 + (i % columns) * 344
+            y = choice_top + (i // columns) * 52
+            label = self.encounters.option_label(action)
+            self.button((x,y,width,45),label,"choice/"+action,mouse,keycap=str(i+1))
+        if not self.options:
+            self.button_key((518,575,246,42),"map_short","event_map",mouse,keycap="M")
+        self.button_key((980,591,214,42),"close","play",mouse,accent=not self.options)
 
     def draw_journal(self, mouse):
         self.shade()
-        self.panel((213, 76, 854, 567))
-        self.words(self.tr("ui.journal_title"), (253, 104), 33, GOLD, True)
+        self.frame((114, 65, 1052, 590), self.tr("ui.journal_title"))
         state = self.run_state
         keys = [key for key in state.observations if key in OBSERVATIONS]
-        y = 165
-        for key in keys[-4:]:
-            self.words(self.tr("clue."+key+".title"), (255, y), 17, GOLD, True)
-            y = self.lines(self.tr("clue."+key+".text"), (256,y+22), 17, 763, MUTED)+10
-        if not keys:
-            y = self.lines(self.tr("ui.empty_journal"), (257,y), 20, 759, MUTED)+12
+        self.panel((140,151,314,423),PANEL)
+        self.panel((478,151,660,423),PANEL)
+        self.words(self.tr("ui.journal_goal"),(161,173),20,GOLD,True)
+        self.words(self.tr("ui.journal_clues"),(499,173),20,BLUE,True)
+        objective_y = 225
         if state.outbreak:
             stop = tuple(state.route).index(state.goal) + 1
-            self.words(self.tr("route.progress", stop=stop, total=len(state.route)), (257, 483), 15, MUTED, True)
-            y = 499
-        self.lines(self.route_hint(), (257, min(511,y+12)), 19, 760, GOLD)
-        self.button_key((255, 573, 225, 39), "event_log", "event_log", mouse)
-        self.button_key((807, 573, 217, 39), "back","play",mouse,accent=True)
+            self.fit_words(self.tr("route.progress",stop=stop,total=len(state.route)),
+                           (162,225),17,266,MUTED,True)
+            for i in range(len(state.route)):
+                pygame.draw.rect(self.canvas, GOLD if i < stop else TRACK, (163+i*30,256,23,4))
+            objective_y = 282
+        self.lines(self.route_hint(),(162,objective_y),18,263)
+        if keys:
+            entries = [(self.tr("clue."+key+".title"),self.tr("clue."+key+".text")) for key in keys[-4:]]
+            size = 17
+            while size > 13 and sum(32+(size+8)*len(self.fonts.wrapped(text,size,598)) for _,text in entries) > 349:
+                size -= 1
+            y = 216
+            for title,text in entries:
+                self.fit_words(title,(501,y),17,600,PAPER,True)
+                y = self.lines(text,(501,y+24),size,598,MUTED)+8
+        else:
+            self.lines(self.tr("ui.empty_journal"),(501,219),18,594,MUTED)
+        self.button_key((140,592,242,42), "event_log", "event_log", mouse)
+        self.button_key((914,592,224,42), "back","play",mouse,accent=True)
 
     def draw_event_log(self, mouse):
         self.shade()
-        self.panel((213, 76, 854, 567))
-        self.words(self.tr("ui.event_log"), (253, 104), 33, GOLD, True)
+        self.frame((213, 76, 854, 567), self.tr("ui.event_log"), accent=BLUE)
         encounters = self.run_state.encounters.values()
         history = sorted((event for event in encounters if event.clock), key=lambda event: event.clock, reverse=True) if self.run_state.outbreak else []
         page_count = max(1, math.ceil(len(history) / 5))
         self.event_page = max(0, min(self.event_page, page_count - 1))
         if not history:
             self.lines(self.tr("exp.log_empty"), (254, 182), 20, 760, MUTED)
-        for i, event in enumerate(history[self.event_page*5:self.event_page*5+5]):
+        page = history[self.event_page*5:self.event_page*5+5]
+        for i, event in enumerate(page):
             y = 174 + i*76
             h, m = divmod(event.clock % 1440, 60)
-            self.words(f"{h:02d}:{m:02d}", (254,y), 17, MUTED)
+            self.interface.mono(self.canvas,f"{h:02d}:{m:02d}",(254,y+11),17,BLUE,"midleft")
             name = self.tr(self.encounters.title(event)) + "  ·  " + event.name(self.localizer.language)
-            self.words(name, (323,y), 19, GOLD, True)
+            self.fit_words(name, (323,y),19,701,PAPER,True)
             desc = self.encounters.result_key(event) if event.outcome else "exp.log_" + event.status
-            self.lines(self.tr(desc), (323,y+27), 15, 690)
+            self.lines(self.tr(desc), (323,y+27), 15, 690, MUTED)
+            if i < len(page)-1:
+                pygame.draw.line(self.canvas,LINE,(253,y+65),(1026,y+65))
         self.button_key((254, 574, 120, 38), "map_previous", "event_previous", mouse, enabled=self.event_page > 0)
         self.words(f"{self.event_page+1} / {page_count}", (418, 594), 15, MUTED, False, "center")
         self.button_key((463, 574, 120, 38), "map_next", "event_next", mouse, enabled=self.event_page+1 < page_count)
         self.button_key((808, 574, 215, 38), "back", "journal", mouse, accent=True)
 
+    def open_map(self, return_to="play"):
+        self.map_return = return_to
+        self.scene = "map"
+
+    def map_colors(self):
+        state = self.run_state
+        return FIELD_MAP if state and (state.blackout or state.outbreak) else DIRECTORY
+
     def map_layer(self):
-        if self.map_zoom:
-            bounds = pygame.Rect(75*32,37*32,76*32,91*32)
-        else:
-            bounds = self.world_map_bounds
-        scale = min(800/bounds.width, 500/bounds.height)
-        w,h = round(bounds.width*scale), round(bounds.height*scale)
-        rect = pygame.Rect(470-w//2, 121, w, h)
-        if self.map_zoom not in self.maps:
-            layer = pygame.transform.smoothscale(self.world.ground.subsurface(bounds), (w,h))
-            self.maps[self.map_zoom] = layer
-        return self.maps[self.map_zoom], bounds, rect, scale
+        bounds = MAP_FOCUS if self.map_zoom else self.world_map_bounds
+        scale = min((MAP_SHEET.width - 8) / bounds.width, (MAP_SHEET.height - 24) / bounds.height)
+        size = round(bounds.width * scale), round(bounds.height * scale)
+        rect = pygame.Rect((0,0), size)
+        rect.center = MAP_SHEET.center
+        colors = self.map_colors()
+        cache_key = (self.map_zoom, colors)
+        if cache_key not in self.maps:
+            self.maps[cache_key] = campus_atlas(bounds, size, scale, colors)
+        return self.maps[cache_key], bounds, rect, scale
 
     def map_pin_positions(self, bounds, rect, scale):
         return {
@@ -1403,6 +1600,14 @@ class Game:
         nearest = min(pins, key=lambda key: pins[key].distance_squared_to(mouse), default=None)
         return nearest if nearest is not None and pins[nearest].distance_squared_to(mouse) <= 9**2 else None
 
+    def map_marker_at(self, mouse, pins, bounds, rect, scale):
+        pin = self.map_pin_at(mouse, pins)
+        if pin is not None or not rect.collidepoint(mouse):
+            return pin
+        point = (Vector2(mouse) - rect.topleft) / scale + bounds.topleft
+        return next((key for key, building in CAMPUS_BUILDINGS.items()
+                     if key in pins and pygame.Rect(building["rect"].pixels()).collidepoint(point)), None)
+
     def change_map_page(self, delta):
         _, bounds, _, _ = self.map_layer()
         count = sum(bounds.collidepoint(point) for point in self.map_points.values())
@@ -1412,69 +1617,149 @@ class Game:
     def pick_map_marker(self, mouse):
         _, bounds, rect, scale = self.map_layer()
         pins = self.map_pin_positions(bounds, rect, scale)
-        key = self.map_pin_at(mouse, pins)
+        key = self.map_marker_at(mouse, pins, bounds, rect, scale)
         if key is not None:
             self.map_selected = key
             self.map_page = list(pins).index(key) // MAP_PAGE_SIZE
 
     def draw_map(self, mouse):
-        self.shade()
-        self.panel((128, 58, 1024, 619))
-        self.words(self.tr("ui.map_title"), (166, 77), 29, GOLD, True)
-        image, bounds, map_rect, scale = self.map_layer()
-        self.canvas.blit(image, map_rect)
+        self.shade((9,17,16,222))
+        self.draw_field_header("map_short")
         state = self.run_state
+        colors = self.map_colors()
+        image, bounds, map_rect, scale = self.map_layer()
+        pygame.draw.rect(self.canvas,colors.paper,MAP_SHEET,border_radius=4)
+        self.canvas.blit(image, map_rect)
+        pygame.draw.rect(self.canvas,colors.curb,MAP_SHEET,1,border_radius=4)
+        self.draw_atlas_labels(bounds,map_rect,scale,colors)
         pins = self.map_pin_positions(bounds, map_rect, scale)
         page_count = max(1, math.ceil(len(pins) / MAP_PAGE_SIZE))
+        self.map_page = min(self.map_page, page_count - 1)
         start = self.map_page * MAP_PAGE_SIZE
         page = list(pins)[start:start + MAP_PAGE_SIZE]
-        rows = {key: pygame.Rect(778, 144 + 34*i, 316, 30) for i, key in enumerate(page)}
+        rows = {key: pygame.Rect(904, 166 + 31*i, 322, 27) for i, key in enumerate(page)}
         hovered_row = next((key for key, row in rows.items() if row.collidepoint(mouse)), None)
-        highlighted = hovered_row or self.map_pin_at(mouse, pins) or self.map_selected
+        highlighted = hovered_row or self.map_marker_at(mouse,pins,bounds,map_rect,scale) or self.map_selected
+
+        def project(point):
+            return (Vector2(point) - bounds.topleft) * scale + map_rect.topleft
+
         for key, pin in pins.items():
-            pygame.draw.circle(self.canvas, INK, pin, 5)
-            pygame.draw.circle(self.canvas, GOLD if key in rows else MUTED, pin, 3)
+            if key in state.locked:
+                pygame.draw.circle(self.canvas,colors.paper,pin,9)
+                pygame.draw.circle(self.canvas,colors.alert,pin,9,1)
+                icon(self.canvas,"lock",pin,colors.alert,14)
+            else:
+                pygame.draw.circle(self.canvas,colors.paper,pin,4)
+                pygame.draw.circle(self.canvas,colors.ink,pin,2 if key in rows else 1)
+        for point, time in self.map_sightings.values():
+            if state.outbreak and state.elapsed - time <= SIGHTING_SECONDS and bounds.collidepoint(point):
+                mark = project(point)
+                pygame.draw.circle(self.canvas,colors.paper,mark,9)
+                icon(self.canvas,"sighting",mark,colors.alert,17)
+        if state.outbreak and highlighted in self.slots.side_exits:
+            point = self.slots.side_exits[highlighted]
+            if bounds.collidepoint(point):
+                mark = project(point)
+                pygame.draw.circle(self.canvas,colors.paper,mark,9)
+                icon(self.canvas,"side",mark,colors.route,16)
         if state.outbreak and not state.ending:
             target = pins.get(state.goal_area)
             if state.goal_area in self.slots.outdoor_clues:
                 outdoor_point = self.slots.outdoor_clues[state.goal_area]
                 if bounds.collidepoint(outdoor_point):
-                    target = (Vector2(outdoor_point) - bounds.topleft) * scale + map_rect.topleft
+                    target = project(outdoor_point)
             if target is not None:
-                x, y = target
-                pygame.draw.polygon(self.canvas, GOLD, ((x,y-11),(x+11,y),(x,y+11),(x-11,y)), 2)
+                pygame.draw.circle(self.canvas,colors.paper,target,8)
+                icon(self.canvas,"goal",target,colors.alert,24)
         point = state.position if state.area == "campus" else self.slots.doors[state.area]
         if bounds.collidepoint(point):
-            pin = (Vector2(point) - bounds.topleft) * scale + map_rect.topleft
-            pygame.draw.circle(self.canvas, PAPER, pin, 7, 2)
-        if highlighted in pins:
-            pin = pins[highlighted]
-            pygame.draw.circle(self.canvas, INK, pin, 9, 4)
-            pygame.draw.circle(self.canvas, GOLD, pin, 8, 2)
-            name = self.campus_name(highlighted)
-            width = self.fonts.get(16, True).size(name)[0] + 22
-            tag = pygame.Rect(0, 0, width, 27)
-            tag.midbottom = (round(pin.x), round(pin.y)-12)
-            tag.clamp_ip(pygame.Rect(149, 121, 609, 500))
-            self.panel(tag, INK, GOLD, radius=6)
-            self.words(name, tag.center, 16, PAPER, True, "center")
+            pin = project(point)
+            pygame.draw.circle(self.canvas,INK,pin,10)
+            icon(self.canvas,"player",pin,PAPER,23)
         if waypoint := self.encounters.waypoint():
             area, point = waypoint
             if area != "campus":
                 point = self.slots.doors[area]
             if bounds.collidepoint(point):
-                x, y = (Vector2(point) - bounds.topleft) * scale + map_rect.topleft
-                pygame.draw.circle(self.canvas, BLUE, (x, y), 7, 2)
-        self.words(self.tr("ui.landmarks"), (779, 107), 20, GOLD, True)
+                pin = project(point)
+                pygame.draw.circle(self.canvas,colors.paper,pin,9)
+                icon(self.canvas,"waypoint",pin,colors.route,24)
+        if highlighted in pins:
+            pin = pins[highlighted]
+            pygame.draw.circle(self.canvas,colors.ink,pin,11,2)
+            name = self.campus_name(highlighted)
+            if highlighted in state.locked:
+                name = self.tr("fixture.locked_door",place=name)
+            width = self.fonts.get(16, True).size(name)[0] + 22
+            tag = pygame.Rect(0, 0, width, 27)
+            tag.midbottom = (round(pin.x), round(pin.y)-12)
+            tag.clamp_ip(MAP_SHEET.inflate(-8,-8))
+            self.panel(tag, INK, GOLD, radius=6)
+            self.words(name, tag.center, 16, PAPER, True, "center")
+        self.panel((889,91,355,564),PANEL,LINE,radius=6)
+        phase = "map_after" if state.outbreak else "map_blackout" if state.blackout else "map_before"
+        self.fit_words(self.tr("ui."+phase),
+                       (905,114),14,315,RED if colors is FIELD_MAP else (165,206,183),True,"midleft")
+        self.interface.heading(self.canvas,self.tr("ui.landmarks"),(904,126),27,322,self.localizer.language)
         for key, row in rows.items():
             self.button(row, self.campus_name(key), "map_pin/" + key, mouse, accent=key == highlighted)
-        self.button_key((778, 426, 102, 32), "map_previous", "map_previous", mouse, enabled=self.map_page > 0)
-        self.words(f"{self.map_page + 1} / {page_count}", (936, 442), 15, MUTED, False, "center")
-        self.button_key((992, 426, 102, 32), "map_next", "map_next", mouse, enabled=self.map_page + 1 < page_count)
+        self.button_key((904, 423, 98, 32), "map_previous", "map_previous", mouse, enabled=self.map_page > 0)
+        self.words(f"{self.map_page + 1} / {page_count}", (1065, 439), 15, MUTED, False, "center")
+        self.button_key((1128, 423, 98, 32), "map_next", "map_next", mouse, enabled=self.map_page + 1 < page_count)
+        pygame.draw.line(self.canvas,LINE,(905,468),(1225,468))
         if state.outbreak:
-            self.lines(self.route_hint(), (779, 474), 16, 316, GOLD)
-        self.button_key((778, 543, 316, 42), "full_map" if self.map_zoom else "route_map", "zoom", mouse)
-        self.button_key((778, 595, 316, 42), "back", "play", mouse, accent=True)
+            self.lines(self.route_hint(), (905, 481), 15, 315, PAPER)
+        elif highlighted is None:
+            self.lines(self.tr("ui.map_hint"),(905,481),15,315,MUTED)
+        if highlighted in pins:
+            self.fit_words(self.campus_name(highlighted),(905,571),16,315,GOLD,True,"midleft")
+        self.button_key((904, 597, 152, 39), "full_map" if self.map_zoom else "route_map", "zoom", mouse)
+        self.button_key((1066, 597, 160, 39), "back", "map_back", mouse, accent=True,keycap="M")
+        self.draw_map_legend()
+
+    def draw_atlas_labels(self, bounds, rect, scale, colors):
+        title = "ui.map_field" if colors is FIELD_MAP else "ui.map_directory"
+        pygame.draw.rect(self.canvas,colors.paper,(49,106,209,67),border_radius=3)
+        self.words(self.tr("ui.campus_main"),(56,110),13,colors.ink,True)
+        self.interface.heading(self.canvas,self.tr(title),(55,131),29,199,self.localizer.language,colors.ink)
+        self.interface.mono(self.canvas,"N",(845,110),13,colors.ink,"center")
+        pygame.draw.polygon(self.canvas,colors.ink,((845,121),(835,149),(845,144),(855,149)))
+        pygame.draw.polygon(self.canvas,colors.paper,((845,127),(845,141),(839,144)))
+        lake = next(water for water in WATERS if water["id"] == "success_lake_water")
+        shore = [Vector2(point) * TILE for point in lake["points"]]
+        center = sum(shore,Vector2()) / len(shore)
+        occupied = [pygame.Rect(49,106,209,67), pygame.Rect(822,98,49,55)]
+        for label, point, offset in ((self.localizer.t("zone.success_lake"),center,(9,0)),
+                                     (self.campus_name("lawn"),self.slots.lawn,(0,-13)),
+                                     (self.campus_name("gate"),self.slots.start,(-3,-16))):
+            if bounds.collidepoint(point):
+                position = (Vector2(point)-bounds.topleft)*scale + rect.topleft + offset
+                occupied.append(self.fit_words(label,position,14,139,colors.ink,True,"center").inflate(8,4))
+        if not self.map_zoom:
+            return
+        for key in ("education","main_library","general_4","xin_hall","ren_hall","li_hall","yi_hall"):
+            footprint = pygame.Rect(CAMPUS_BUILDINGS[key]["rect"].pixels())
+            name = self.campus_name(key)
+            label = pygame.Rect((0,0),self.fonts.get(12,True).size(name))
+            position = (Vector2(footprint.midtop) - bounds.topleft) * scale + rect.topleft
+            label.midbottom = position.x, position.y - 2
+            if rect.contains(label) and label.collidelist(occupied) < 0:
+                pygame.draw.rect(self.canvas,colors.paper,label.inflate(4,1),border_radius=2)
+                self.words(name,label.topleft,12,colors.ink,True)
+                occupied.append(label.inflate(8,4))
+
+    def draw_map_legend(self):
+        self.panel((36,670,1208,35),PANEL)
+        keys = [("player","map_you",PAPER),("goal","map_goal",GOLD),("waypoint","map_waypoint",BLUE),
+                ("lock","map_locked",RED)]
+        if self.run_state.outbreak:
+            keys += [("side","map_side",BLUE),("sighting","map_seen",RED)]
+        spacing = 1180 // len(keys)
+        for i,(glyph,label,color) in enumerate(keys):
+            x = 55+i*spacing
+            icon(self.canvas,glyph,(x,687),color,18)
+            self.fit_words(self.tr("ui."+label),(x+15,687),14,spacing-31,MUTED,anchor="midleft")
 
     def draw_final(self, mouse):
         state = self.run_state
@@ -1491,14 +1776,13 @@ class Game:
             self.words(self.tr(hint), (640,655), 19, GOLD, True, "center")
             return
         self.shade()
-        self.panel((282, 143, 716, 449))
         if state.ending:
             title, description = "ending.title", "ending.text"
         else:
             title, description = "death.title", "death."+state.death
-        self.words(self.tr(title), (327,181), 32 if state.ending else 40, RED, True)
+        self.frame((282, 143, 716, 449), self.tr(title), accent=RED, title_size=34)
         name = self.profile.name or self.tr("ui.default_name")
-        y = self.lines(self.tr(description, name=name), (329,260), 21, 615)
+        y = self.lines(self.tr(description, name=name), (329,252), 21, 615)
         if state.ending:
             if state.team:
                 person = self.actor_name(state.team[0])

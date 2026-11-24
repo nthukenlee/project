@@ -70,7 +70,7 @@ class EncounterFlow:
             event.clock = self.state.minute
         event.status = "heard"
         self.game.show(self.title(event), f"encounter.{event.event}.text", self.options(key, event),
-                       speaker=event.name(self.game.localizer.language))
+                       speaker=event.name(self.game.localizer.language), encounter=True)
 
     @staticmethod
     def options(key, event):
@@ -101,7 +101,8 @@ class EncounterFlow:
 
     def finish(self, event, outcome):
         event.status, event.outcome = "resolved", outcome
-        self.game.show(self.title(event), self.result_key(event), speaker=event.name(self.game.localizer.language))
+        self.game.show(self.title(event), self.result_key(event),
+                       speaker=event.name(self.game.localizer.language), encounter=True)
 
     def set_pin(self, name):
         self.state.event_progress["waypoint"] = ("campus", self.pins[name])

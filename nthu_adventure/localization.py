@@ -15,7 +15,7 @@ class Localizer:
         for code in self.supported:
             with (data_dir / f"{code}.json").open("r", encoding="utf-8") as handle:
                 self.catalogs[code] = json.load(handle)
-            for revision in ('v5','v6','v7','zombie','adventure','survival','expedition','decisions'):
+            for revision in ('v5','v6','v7','zombie','adventure','survival','expedition','decisions','interface'):
                 supplement = data_dir / f"{code}_{revision}.json"
                 if supplement.exists():
                     with supplement.open("r", encoding="utf-8") as handle:
